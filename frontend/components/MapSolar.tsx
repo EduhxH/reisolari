@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef } from "react";
 import Map, { MapRef } from "react-map-gl";
 import mapboxgl from "mapbox-gl";
 import MapboxDraw from "@mapbox/mapbox-gl-draw";
@@ -15,10 +15,9 @@ type Props = {
 const MapSolar: React.FC<Props> = ({ onPolygonChange }) => {
   const mapRef = useRef<MapRef | null>(null);
   const drawRef = useRef<MapboxDraw | null>(null);
-  const [loaded, setLoaded] = useState(false);
 
-  useEffect(() => {
-    if (!mapRef.current || loaded) return;
+  const setupDraw = useCallback(() => {
+    if (!mapRef.current || drawRef.current) return;
 
     const map = mapRef.current.getMap();
     const draw = new MapboxDraw({
@@ -35,8 +34,6 @@ const MapSolar: React.FC<Props> = ({ onPolygonChange }) => {
     map.on("draw.update", updateArea);
     map.on("draw.delete", () => onPolygonChange(0, { lat: 0, lon: 0 }));
 
-    setLoaded(true);
-
     function updateArea() {
       const data = draw.getAll();
       if (data.features.length > 0) {
@@ -47,12 +44,17 @@ const MapSolar: React.FC<Props> = ({ onPolygonChange }) => {
         onPolygonChange(area, { lat, lon });
       }
     }
-  }, [loaded, onPolygonChange]);
+  }, [onPolygonChange]);
+
+  useEffect(() => {
+    setupDraw();
+  }, [setupDraw]);
 
   return (
-    <div className="w-full h-[500px] rounded-xl overflow-hidden border border-slate-800">
+    <div className="w-full h-[500px] rounded-xl overflow-hidden border border-slate-800" style={{ height: 500 }}>
       <Map
         ref={mapRef}
+        onLoad={() => setupDraw()}
         initialViewState={{
           longitude: -9.142685,
           latitude: 38.736946,

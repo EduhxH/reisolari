@@ -11,14 +11,16 @@ type Props = {
 
 const SimulationPanel: React.FC<Props> = ({ areaM2, centroid, onSimulationResult }) => {
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [price, setPrice] = useState(0.20);
   const [kwp, setKwp] = useState(3);
   const [hasSocial, setHasSocial] = useState(false);
-  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
+  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL?.replace(/\/$/, "") ?? "";
 
   const runSimulation = async () => {
     if (!centroid) return;
     setLoading(true);
+    setError(null);
     try {
       const payload = {
         theme: "Simulação de Mercado P2P Solar em Portugal",
@@ -32,8 +34,11 @@ const SimulationPanel: React.FC<Props> = ({ areaM2, centroid, onSimulationResult
         latitude: centroid.lat,
         longitude: centroid.lon
       };
-      const res = await axios.post(`${backendUrl}/api/v1/simulation/`, payload);
+      const endpoint = `${backendUrl || ""}/api/v1/simulation/`;
+      const res = await axios.post(endpoint, payload);
       onSimulationResult(res.data);
+    } catch {
+      setError("Não foi possível executar a simulação. Verifica se o backend está ativo.");
     } finally {
       setLoading(false);
     }
@@ -69,6 +74,7 @@ const SimulationPanel: React.FC<Props> = ({ areaM2, centroid, onSimulationResult
         />
         Tarifa Social de Energia (desconto 33.8%)
       </label>
+      {error ? <div className="text-sm text-red-400">{error}</div> : null}
       <button
         onClick={runSimulation}
         disabled={loading || !centroid || areaM2 <= 0}
