@@ -1,0 +1,315 @@
+"use client";
+
+import React, { useEffect, useState } from "react";
+import axios from "axios";
+
+type Listing = {
+  id: string;
+  title: string;
+  description: string;
+  price_cents: number;
+  currency: string;
+  condition: "new" | "used" | "refurbished";
+  manufacturer?: string | null;
+  model?: string | null;
+  power_w?: number | null;
+  image_urls: string[];
+  created_at: string;
+};
+
+type OLXAd = {
+  id: number;
+  title: string;
+  description: string;
+  price_display: string;
+  price_cents: number;
+  url: string;
+  image_url: string | null;
+  seller_name: string;
+  seller_rating: number;
+  seller_reviews_count: number;
+  location: string;
+  created_at: string;
+};
+
+const conditionLabels: Record<Listing["condition"], string> = {
+  new: "Novo",
+  used: "Usado",
+  refurbished: "Recondicionado"
+};
+
+const formatPrice = (cents: number, currency: string) =>
+  new Intl.NumberFormat("pt-PT", {
+    style: "currency",
+    currency: currency.toUpperCase()
+  }).format(cents / 100);
+
+export default function MarketplacePage() {
+  // Tabs: 'internal' or 'olx'
+  const [activeTab, setActiveTab] = useState<"internal" | "olx">("internal");
+  
+  // Internal listings state
+  const [listings, setListings] = useState<Listing[]>([]);
+  const [condition, setCondition] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // OLX listings state
+  const [olxListings, setOlxListings] = useState<OLXAd[]>([]);
+  const [olxLoading, setOlxLoading] = useState(false);
+  const [olxError, setOlxError] = useState<string | null>(null);
+  const [searchDistrict, setSearchDistrict] = useState("Portugal");
+  
+  // Location coordinates from localStorage
+  const [coords, setCoords] = useState<{ lat: number; lon: number } | null>(null);
+
+  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL?.replace(/\/$/, "") ?? "";
+
+  // Retrieve coordinates on mount
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const latStr = localStorage.getItem("reisolari_lat");
+      const lonStr = localStorage.getItem("reisolari_lon");
+      if (latStr && lonStr) {
+        setCoords({ lat: parseFloat(latStr), lon: parseFloat(lonStr) });
+      }
+    }
+  }, []);
+
+  // Fetch Internal listings
+  useEffect(() => {
+    const loadListings = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const params = condition ? { condition } : {};
+        const response = await axios.get(`${backendUrl || ""}/api/v1/listings/`, { params });
+        setListings(response.data);
+      } catch {
+        setError("Não foi possível carregar os anúncios do mercado interno.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadListings();
+  }, [backendUrl, condition]);
+
+  // Fetch OLX listings
+  useEffect(() => {
+    const loadOlxListings = async () => {
+      setOlxLoading(true);
+      setOlxError(null);
+      try {
+        const params: Record<string, any> = {};
+        if (coords) {
+          params.latitude = coords.lat;
+          params.longitude = coords.lon;
+        }
+        const response = await axios.get(`${backendUrl || ""}/api/v1/listings/olx`, { params });
+        setOlxListings(response.data.ads || []);
+        setSearchDistrict(response.data.district || "Portugal");
+      } catch {
+        setOlxError("Não foi possível carregar os anúncios do OLX.");
+      } finally {
+        setOlxLoading(false);
+      }
+    };
+
+    loadOlxListings();
+  }, [backendUrl, coords]);
+
+  const renderStars = (rating: number, count: number) => {
+    const fullStars = Math.round(rating);
+    return (
+      <div className="flex items-center gap-0.5 text-amber-400" title={`Classificação do vendedor: ${rating}/5`}>
+        {Array.from({ length: 5 }).map((_, idx) => (
+          <span key={idx} className="text-xs">
+            {idx < fullStars ? "★" : "☆"}
+          </span>
+        ))}
+        <span className="text-[10px] text-slate-500 ml-1 font-mono">({count})</span>
+      </div>
+    );
+  };
+
+  return (
+    <main className="min-h-screen bg-bg text-slate-100 p-6 space-y-6">
+      <header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between border-b border-slate-800 pb-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-white">Marketplace solar</h1>
+          <p className="text-sm text-slate-400">Compre painéis solares novos e usados diretamente ou explore anúncios regionais do OLX.</p>
+        </div>
+        
+        {/* Tab Switcher */}
+        <div className="flex bg-slate-900 p-1 rounded-lg border border-slate-800">
+          <button
+            onClick={() => setActiveTab("internal")}
+            className={`px-4 py-1.5 rounded-md text-xs font-semibold transition-all ${
+              activeTab === "internal"
+                ? "bg-slate-800 text-emerald-400 shadow-sm"
+                : "text-slate-400 hover:text-slate-200"
+            }`}
+          >
+            Mercado P2P Interno
+          </button>
+          <button
+            onClick={() => setActiveTab("olx")}
+            className={`px-4 py-1.5 rounded-md text-xs font-semibold transition-all ${
+              activeTab === "olx"
+                ? "bg-slate-800 text-emerald-400 shadow-sm"
+                : "text-slate-400 hover:text-slate-200"
+            }`}
+          >
+            Usados no OLX
+          </button>
+        </div>
+      </header>
+
+      {activeTab === "internal" ? (
+        <div className="space-y-4">
+          <div className="flex justify-between items-center">
+            <h2 className="text-lg font-semibold text-slate-200">Painéis de Vendedores Reisolari</h2>
+            <label className="flex items-center text-sm gap-2 bg-slate-900 border border-slate-800 rounded-md px-3 py-1.5">
+              <span className="text-slate-400 text-xs">Estado:</span>
+              <select
+                value={condition}
+                onChange={event => setCondition(event.target.value)}
+                className="bg-transparent text-slate-200 outline-none text-xs font-medium cursor-pointer"
+              >
+                <option value="" className="bg-slate-950">Todos</option>
+                <option value="new" className="bg-slate-950">Novo</option>
+                <option value="used" className="bg-slate-950">Usado</option>
+                <option value="refurbished" className="bg-slate-950">Recondicionado</option>
+              </select>
+            </label>
+          </div>
+
+          {loading ? <div className="text-sm text-slate-400">A carregar anúncios...</div> : null}
+          {error ? <div className="text-sm text-red-300">{error}</div> : null}
+
+          {!loading && listings.length === 0 ? (
+            <div className="text-sm text-slate-400 py-12 text-center border border-dashed border-slate-800 rounded-lg">
+              Nenhum anúncio disponível no mercado interno.
+            </div>
+          ) : (
+            <section className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
+              {listings.map(listing => (
+                <article key={listing.id} className="rounded-lg border border-slate-800 bg-card overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-emerald-950/10">
+                  <div className="aspect-[4/3] bg-slate-950 relative">
+                    {listing.image_urls[0] ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={listing.image_urls[0]} alt={listing.title} className="h-full w-full object-cover" />
+                    ) : (
+                      <div className="h-full w-full grid place-items-center text-xs text-slate-500">Sem imagem</div>
+                    )}
+                    <span className="absolute top-2 left-2 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                      {conditionLabels[listing.condition]}
+                    </span>
+                  </div>
+                  <div className="p-4 space-y-2">
+                    <div className="flex items-start justify-between gap-3">
+                      <h3 className="font-semibold text-slate-100 leading-snug line-clamp-1">{listing.title}</h3>
+                      <span className="text-sm text-emerald-400 font-bold whitespace-nowrap">
+                        {formatPrice(listing.price_cents, listing.currency)}
+                      </span>
+                    </div>
+                    <div className="text-[10px] text-slate-500 font-mono">
+                      {listing.power_w ? `${listing.power_w} W` : ""}
+                      {listing.manufacturer ? ` | ${listing.manufacturer}` : ""}
+                    </div>
+                    <p className="text-xs text-slate-300 line-clamp-2">{listing.description}</p>
+                  </div>
+                </article>
+              ))}
+            </section>
+          )}
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {/* Location status banner */}
+          <div className="p-3 rounded-lg bg-slate-900 border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <span className="text-emerald-400 text-sm">📍</span>
+              <span className="text-xs text-slate-300">
+                Região de busca OLX: <strong className="text-white">{searchDistrict}</strong>
+              </span>
+            </div>
+            {searchDistrict === "Portugal" ? (
+              <span className="text-[10px] text-slate-500 italic">
+                * Dica: Desenhe a sua casa no simulador para ver anúncios da sua região.
+              </span>
+            ) : (
+              <span className="text-[10px] text-emerald-400/80 font-medium bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                Filtro regional ativo
+              </span>
+            )}
+          </div>
+
+          {olxLoading ? <div className="text-sm text-slate-400">A obter anúncios em tempo real do OLX...</div> : null}
+          {olxError ? <div className="text-sm text-red-300">{olxError}</div> : null}
+
+          {!olxLoading && olxListings.length === 0 ? (
+            <div className="text-sm text-slate-400 py-12 text-center border border-dashed border-slate-800 rounded-lg">
+              Nenhum painel solar usado foi encontrado no OLX nesta região.
+            </div>
+          ) : (
+            <section className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
+              {olxListings.map(ad => (
+                <a
+                  href={ad.url}
+                  key={ad.id}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group block rounded-lg border border-slate-800 bg-card overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-emerald-950/20"
+                >
+                  <div className="aspect-[4/3] bg-slate-950 relative">
+                    {ad.image_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={ad.image_url}
+                        alt={ad.title}
+                        className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      />
+                    ) : (
+                      <div className="h-full w-full grid place-items-center text-xs text-slate-500">Sem imagem</div>
+                    )}
+                    <span className="absolute top-2 left-2 px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                      OLX Portugal
+                    </span>
+                    <span className="absolute bottom-2 right-2 px-2 py-0.5 rounded text-[9px] bg-slate-950/80 text-slate-300 backdrop-blur-sm">
+                      {ad.location.split(",")[0]}
+                    </span>
+                  </div>
+                  <div className="p-4 space-y-2 flex flex-col justify-between h-[160px]">
+                    <div className="space-y-1">
+                      <div className="flex items-start justify-between gap-3">
+                        <h3 className="font-semibold text-slate-100 leading-snug line-clamp-1 text-sm group-hover:text-emerald-400 transition-colors">
+                          {ad.title}
+                        </h3>
+                        <span className="text-sm text-emerald-400 font-bold whitespace-nowrap">
+                          {ad.price_display}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-400 line-clamp-3 leading-relaxed">
+                        {ad.description}
+                      </p>
+                    </div>
+
+                    {/* Seller Name and Stars Rating */}
+                    <div className="flex justify-between items-center text-xs border-t border-slate-800/80 pt-2.5 mt-auto">
+                      <span className="text-slate-300 font-medium truncate max-w-[140px]" title={ad.seller_name}>
+                        {ad.seller_name}
+                      </span>
+                      {renderStars(ad.seller_rating, ad.seller_reviews_count)}
+                    </div>
+                  </div>
+                </a>
+              ))}
+            </section>
+          )}
+        </div>
+      )}
+    </main>
+  );
+}

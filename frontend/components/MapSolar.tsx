@@ -51,7 +51,7 @@ const MapSolar: React.FC<Props> = ({ onPolygonChange }) => {
   }, [setupDraw]);
 
   return (
-    <div className="w-full h-[500px] rounded-xl overflow-hidden border border-slate-800" style={{ height: 500 }}>
+    <div className="w-full h-[500px] rounded-lg overflow-hidden border border-slate-800" style={{ height: 500 }}>
       <Map
         ref={mapRef}
         onLoad={() => setupDraw()}

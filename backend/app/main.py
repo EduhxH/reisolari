@@ -1,13 +1,28 @@
+from contextlib import asynccontextmanager
+import logging
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1 import auth, listings, simulation, payments, chat
 from app.websocket.chat_ws import router as chat_ws_router
 from app.core.logging_config import setup_logging
+from app.db.mongo import init_indexes
 
 setup_logging()
+logger = logging.getLogger(__name__)
 
-app = FastAPI(title="Solar P2P Marketplace", version="1.0.0")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    try:
+        await init_indexes()
+    except Exception as exc:
+        logger.warning("MongoDB index initialization skipped: %s", exc)
+    yield
+
+
+app = FastAPI(title="Solar P2P Marketplace", version="1.0.0", lifespan=lifespan)
 
 origins = ["http://localhost:3000", "https://localhost:3000"]
 

@@ -1,11 +1,11 @@
-import "mapbox-gl/dist/mapbox-gl.css";
 import "@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css";
-import "../styles/globals.css";
+import "mapbox-gl/dist/mapbox-gl.css";
 import type { Metadata } from "next";
+import "../styles/globals.css";
 
 export const metadata: Metadata = {
-  title: "Solar P2P Marketplace",
-  description: "Marketplace P2P & Simulador Solar – Portugal"
+  title: "Reisolari",
+  description: "Marketplace P2P e simulador solar para Portugal"
 };
 
 export default function RootLayout({

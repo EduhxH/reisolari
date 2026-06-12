@@ -398,6 +398,63 @@ This project is licensed under the MIT License. See the [LICENSE](./LICENSE) fil
 
 ---
 
+## Implementation Update
+
+This repository now includes the core production paths called out in the gap report:
+
+- JWT registration, login, profile update and GDPR-oriented account deactivation under `/api/v1/auth`.
+- Authenticated marketplace CRUD under `/api/v1/listings`.
+- Stripe Connect Express onboarding under `/api/v1/payments/connect/onboarding-link`.
+- Authenticated Connect status checks under `/api/v1/payments/connect/status`.
+- Authenticated checkout session creation under `/api/v1/payments/checkout`.
+- Idempotent Stripe webhook handling for `checkout.session.completed`.
+- Listing-scoped chat rooms under `/api/v1/chat/rooms`, reused by the existing WebSocket channel.
+- Deterministic panel recommendations in the simulation response, including roof fit count, estimated kWp, annual kWh, simple payback and roof coverage ratio.
+- Advanced fiscal metrics: effective electricity price, lifetime savings, NPV and approximate IRR.
+
+### Architecture Diagram
+
+```mermaid
+flowchart TD
+  U["User in Next.js app"] --> M["Mapbox + Turf roof polygon"]
+  U --> MP["Marketplace listings UI"]
+  M --> SIM["POST /api/v1/simulation"]
+  SIM --> PVGIS["PVGIS European Commission API"]
+  SIM --> PHY["Physics engine: E = A * r * H * PR"]
+  SIM --> FISC["Portugal fiscal and ROI engine"]
+  SIM --> REC["Panel recommender and roof coverage"]
+  SIM --> AI["Async multi-agent AI orchestrator"]
+  AI --> A1["Physics/Chemistry agent"]
+  AI --> A2["Finance/Fiscal agent"]
+  AI --> A3["Sustainability agent"]
+  PHY --> DB["MongoDB Atlas"]
+  FISC --> DB
+  REC --> DB
+  AI --> DB
+  MP --> LIST["/api/v1/listings CRUD"]
+  LIST --> DB
+  U --> AUTH["/api/v1/auth JWT"]
+  AUTH --> DB
+  U --> PAY["Stripe Connect checkout"]
+  PAY --> STRIPE["Stripe Connect"]
+  STRIPE --> WH["/api/v1/payments/webhook"]
+  WH --> DB
+  U --> CHAT["/api/v1/chat rooms + /ws/chat"]
+  CHAT --> REDIS["Redis Pub/Sub"]
+  CHAT --> DB
+```
+
+### Environment Files
+
+Copy `backend/.env.example` to `backend/.env` and `frontend/.env.example` to `frontend/.env.local`.
+The examples list all variables read by the code, including MongoDB, Redis, JWT, Groq/OpenAI, Stripe Connect, Mapbox and public app URLs.
+
+### Scientific Notes
+
+The simulator still uses PVGIS as the scientific source for location-specific photovoltaic yield. The endpoint now accepts `tilt_degrees` and `aspect_degrees`, so a user can compare the common Portugal default of 35 degrees facing south with other roof geometries. The recommendation layer uses representative panel classes rather than claiming live market prices; update `DEFAULT_PANEL_CATALOG` in `backend/app/services/panel_recommender.py` with current supplier data before using it for procurement decisions.
+
+---
+
 <div align="center">
   Made with 💜 by <a href="https://github.com/EduhxH">EduhxH</a>
 </div>

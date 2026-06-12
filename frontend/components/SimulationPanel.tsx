@@ -12,8 +12,11 @@ type Props = {
 const SimulationPanel: React.FC<Props> = ({ areaM2, centroid, onSimulationResult }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [price, setPrice] = useState(0.20);
+  const [price, setPrice] = useState(0.2);
   const [kwp, setKwp] = useState(3);
+  const [tilt, setTilt] = useState(35);
+  const [aspect, setAspect] = useState(0);
+  const [region, setRegion] = useState<"continent" | "madeira" | "azores">("continent");
   const [hasSocial, setHasSocial] = useState(false);
   const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL?.replace(/\/$/, "") ?? "";
 
@@ -23,66 +26,118 @@ const SimulationPanel: React.FC<Props> = ({ areaM2, centroid, onSimulationResult
     setError(null);
     try {
       const payload = {
-        theme: "Simulação de Mercado P2P Solar em Portugal",
+        theme: "Simulacao de mercado P2P solar em Portugal",
         area_m2: areaM2,
         installed_power_kwp: kwp,
         panel_efficiency: 0.205,
         performance_ratio: 0.75,
         electricity_price_eur_kwh: price,
         has_social_tariff: hasSocial,
-        region_type: "continent", // poderias inferir via GeoIP no backend
+        region_type: region,
         latitude: centroid.lat,
-        longitude: centroid.lon
+        longitude: centroid.lon,
+        tilt_degrees: tilt,
+        aspect_degrees: aspect
       };
       const endpoint = `${backendUrl || ""}/api/v1/simulation/`;
       const res = await axios.post(endpoint, payload);
+      if (centroid) {
+        localStorage.setItem("reisolari_lat", centroid.lat.toString());
+        localStorage.setItem("reisolari_lon", centroid.lon.toString());
+        localStorage.setItem("reisolari_region", region);
+      }
       onSimulationResult(res.data);
     } catch {
-      setError("Não foi possível executar a simulação. Verifica se o backend está ativo.");
+      setError("Nao foi possivel executar a simulacao. Verifica se o backend esta ativo.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="bg-card text-slate-100 p-4 rounded-xl space-y-3">
-      <div className="text-sm text-slate-400">Área selecionada: {areaM2.toFixed(2)} m²</div>
-      <label className="flex flex-col text-sm">
-        Potência instalada (kWp)
+    <section className="bg-card text-slate-100 p-4 rounded-lg space-y-3 border border-slate-800">
+      <div className="text-sm text-slate-400">Area selecionada: {areaM2.toFixed(2)} m2</div>
+
+      <label className="flex flex-col text-sm gap-1">
+        Potencia pretendida (kWp)
         <input
           type="number"
+          min={0}
+          step={0.1}
           value={kwp}
-          onChange={e => setKwp(parseFloat(e.target.value))}
-          className="mt-1 bg-slate-900 border border-slate-700 rounded px-2 py-1"
+          onChange={event => setKwp(parseFloat(event.target.value) || 0)}
+          className="bg-slate-950 border border-slate-700 rounded-md px-2 py-1"
         />
       </label>
-      <label className="flex flex-col text-sm">
-        Preço eletricidade (€/kWh)
+
+      <label className="flex flex-col text-sm gap-1">
+        Preco eletricidade (EUR/kWh)
         <input
           type="number"
+          min={0}
           step="0.01"
           value={price}
-          onChange={e => setPrice(parseFloat(e.target.value))}
-          className="mt-1 bg-slate-900 border border-slate-700 rounded px-2 py-1"
+          onChange={event => setPrice(parseFloat(event.target.value) || 0)}
+          className="bg-slate-950 border border-slate-700 rounded-md px-2 py-1"
         />
       </label>
+
+      <div className="grid grid-cols-2 gap-3">
+        <label className="flex flex-col text-sm gap-1">
+          Inclinacao
+          <input
+            type="number"
+            min={0}
+            max={90}
+            value={tilt}
+            onChange={event => setTilt(parseFloat(event.target.value) || 0)}
+            className="bg-slate-950 border border-slate-700 rounded-md px-2 py-1"
+          />
+        </label>
+        <label className="flex flex-col text-sm gap-1">
+          Orientacao
+          <input
+            type="number"
+            min={-180}
+            max={180}
+            value={aspect}
+            onChange={event => setAspect(parseFloat(event.target.value) || 0)}
+            className="bg-slate-950 border border-slate-700 rounded-md px-2 py-1"
+          />
+        </label>
+      </div>
+
+      <label className="flex flex-col text-sm gap-1">
+        Regiao fiscal
+        <select
+          value={region}
+          onChange={event => setRegion(event.target.value as "continent" | "madeira" | "azores")}
+          className="bg-slate-950 border border-slate-700 rounded-md px-2 py-1"
+        >
+          <option value="continent">Continente</option>
+          <option value="madeira">Madeira</option>
+          <option value="azores">Acores</option>
+        </select>
+      </label>
+
       <label className="flex items-center gap-2 text-sm">
         <input
           type="checkbox"
           checked={hasSocial}
-          onChange={e => setHasSocial(e.target.checked)}
+          onChange={event => setHasSocial(event.target.checked)}
         />
-        Tarifa Social de Energia (desconto 33.8%)
+        Tarifa Social de Energia
       </label>
-      {error ? <div className="text-sm text-red-400">{error}</div> : null}
+
+      {error ? <div className="text-sm text-red-300">{error}</div> : null}
       <button
         onClick={runSimulation}
         disabled={loading || !centroid || areaM2 <= 0}
-        className="w-full bg-accent text-black font-semibold py-2 rounded disabled:opacity-50"
+        className="w-full bg-accent text-black font-semibold py-2 rounded-md disabled:opacity-50"
       >
         {loading ? "A simular..." : "Simular sistema"}
       </button>
-    </div>
+    </section>
   );
 };
 
