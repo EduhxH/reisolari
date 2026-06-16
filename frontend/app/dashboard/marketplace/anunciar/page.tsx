@@ -1,11 +1,24 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { useAuth } from "@/lib/auth";
-import { fetchCategoryTree, type CategoryNode } from "@/lib/api";
-import { deleteDraft, getDraft, saveDraft } from "@/lib/seller";
+import {
+  MAX_IMAGES,
+  compressToWebp,
+  uploadImage,
+  deleteImage
+} from "@/lib/imageUpload";
+import {
+  fetchCategoryTree,
+  fetchCategorySuggestions,
+  fetchCategoryAttributes,
+  type CategoryNode,
+  type CategorySuggestion,
+  type AttributeSchema
+} from "@/lib/api";
+import { deleteDraft, getDraft, publishListing, saveDraft } from "@/lib/seller";
 import {
   CONDITIONS,
   LISTING_TYPES,
@@ -13,20 +26,55 @@ import {
   defaultAdForm,
   stepSchemas,
   validateStep,
+  validateAttributes,
+  euroToDisplay,
+  displayToEuro,
+  adFormToListingPayload,
+  LISTING_FIELD_STEP,
   type AdForm
 } from "@/lib/adWizard";
+import { lookupPostalCode } from "@/lib/geocoding";
 
 const DRAFT_KEY = "reisolari_ad_draft";
 const inputClass =
   "w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2 text-sm text-slate-100 outline-none focus:border-emerald-600";
 
-type LeafOption = { id: string; root: string; name: string; label: string };
-
-function collectLeaves(node: CategoryNode, root: string): LeafOption[] {
-  if (node.leaf) {
-    return [{ id: node.id, root, name: node.name, label: `${root} › ${node.name}` }];
+/** Chain of nodes from a root down to the category with `id` (inclusive). */
+function findPath(
+  nodes: CategoryNode[],
+  id: string,
+  trail: CategoryNode[] = []
+): CategoryNode[] | null {
+  for (const node of nodes) {
+    const next = [...trail, node];
+    if (node.id === id) return next;
+    const found = node.children?.length ? findPath(node.children, id, next) : null;
+    if (found) return found;
   }
-  return node.children.flatMap(child => collectLeaves(child, root));
+  return null;
+}
+
+/**
+ * Turn the selected-id chain into the list of cascading selects to render.
+ * Each level exposes its sibling options and the currently-selected value; the
+ * next level only appears once a non-leaf is chosen.
+ */
+function buildCascadeLevels(
+  tree: CategoryNode[],
+  cascade: string[]
+): { options: CategoryNode[]; value: string }[] {
+  const levels: { options: CategoryNode[]; value: string }[] = [];
+  let nodes = tree;
+  let depth = 0;
+  while (nodes.length > 0) {
+    const value = cascade[depth] ?? "";
+    levels.push({ options: nodes, value });
+    const selected = nodes.find(node => node.id === value);
+    if (!selected || selected.leaf || !selected.children?.length) break;
+    nodes = selected.children;
+    depth += 1;
+  }
+  return levels;
 }
 
 export default function AnunciarPage() {
@@ -40,16 +88,24 @@ export default function AnunciarPage() {
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [done, setDone] = useState(false);
   const [tree, setTree] = useState<CategoryNode[]>([]);
+  const [cascade, setCascade] = useState<string[]>([]);
+  const [suggestions, setSuggestions] = useState<CategorySuggestion[]>([]);
+  const [attrSchema, setAttrSchema] = useState<AttributeSchema | null>(null);
+  const [attrLoading, setAttrLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [imageError, setImageError] = useState<string | null>(null);
+  const [dragOver, setDragOver] = useState(false);
+  const dragIndex = useRef<number | null>(null);
+  const [geoLoading, setGeoLoading] = useState(false);
+  const [geoInfo, setGeoInfo] = useState<string | null>(null);
+  const [publishing, setPublishing] = useState(false);
+  const [publishError, setPublishError] = useState<string | null>(null);
+  const [publishedId, setPublishedId] = useState<string | null>(null);
 
   const values = watch();
   const serialized = JSON.stringify(values);
 
-  const leafOptions = useMemo<LeafOption[]>(
-    () => tree.flatMap(root => collectLeaves(root, root.name)),
-    [tree]
-  );
-
-  // Load taxonomy for the (skeleton) category picker.
+  // Load taxonomy for the cascading category picker.
   useEffect(() => {
     fetchCategoryTree().then(setTree).catch(() => setTree([]));
   }, []);
@@ -91,6 +147,83 @@ export default function AnunciarPage() {
     };
   }, [authLoading, loaded, user, reset]);
 
+  // Sync the cascade selects from a restored/external category_id (runs once the
+  // tree is available and no cascade has been built yet).
+  useEffect(() => {
+    if (tree.length === 0 || cascade.length > 0) return;
+    if (values.category_id) {
+      const path = findPath(tree, values.category_id);
+      if (path) setCascade(path.map(node => node.id));
+    }
+  }, [tree, values.category_id, cascade.length]);
+
+  // Etapa 1 — debounced NLP suggestions from the title.
+  useEffect(() => {
+    if (step !== 0) return;
+    const title = (values.title || "").trim();
+    if (title.length < 3) {
+      setSuggestions([]);
+      return;
+    }
+    const handle = setTimeout(() => {
+      fetchCategorySuggestions(title).then(setSuggestions).catch(() => setSuggestions([]));
+    }, 400);
+    return () => clearTimeout(handle);
+  }, [values.title, step]);
+
+  // Etapa 2 — load the dynamic attribute schema for the chosen leaf category.
+  useEffect(() => {
+    const categoryId = values.category_id;
+    if (!categoryId) {
+      setAttrSchema(null);
+      return;
+    }
+    let cancelled = false;
+    setAttrLoading(true);
+    fetchCategoryAttributes(categoryId)
+      .then(schema => {
+        if (!cancelled) setAttrSchema(schema);
+      })
+      .finally(() => {
+        if (!cancelled) setAttrLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [values.category_id]);
+
+  // Etapa 5 — debounced postal-code -> locality autofill (real Mapbox geocoding).
+  useEffect(() => {
+    if (step !== 4) return;
+    const code = (values.postal_code || "").trim();
+    if (!/^\d{4}-\d{3}$/.test(code)) {
+      setGeoInfo(null);
+      return;
+    }
+    let cancelled = false;
+    setGeoLoading(true);
+    setGeoInfo(null);
+    const handle = setTimeout(async () => {
+      const result = await lookupPostalCode(code);
+      if (cancelled) return;
+      setGeoLoading(false);
+      if (!result) {
+        setGeoInfo("Código postal não encontrado — preencha a localidade manualmente.");
+        return;
+      }
+      setValue("city", result.city, { shouldDirty: true });
+      if (result.center) {
+        setValue("lon", result.center[0], { shouldDirty: true });
+        setValue("lat", result.center[1], { shouldDirty: true });
+      }
+      setGeoInfo(`${result.city}${result.region ? `, ${result.region}` : ""}`);
+    }, 600);
+    return () => {
+      cancelled = true;
+      clearTimeout(handle);
+    };
+  }, [values.postal_code, step, setValue]);
+
   // Debounced autosave: localStorage always, server when authenticated.
   useEffect(() => {
     if (!loaded) return;
@@ -116,6 +249,101 @@ export default function AnunciarPage() {
     return () => clearTimeout(handle);
   }, [serialized, step, loaded, user, getValues]);
 
+  const cascadeLevels = buildCascadeLevels(tree, cascade);
+  const attrErrors = attrSchema ? validateAttributes(attrSchema.fields, values.attributes) : {};
+
+  /** Set the category (id + breadcrumb label + cascade) from a leaf id. */
+  const applyCategory = (id: string) => {
+    const path = findPath(tree, id);
+    if (!path) return;
+    setCascade(path.map(node => node.id));
+    setValue("category_id", id, { shouldDirty: true });
+    setValue("category_label", path.map(node => node.name).join(" › "), { shouldDirty: true });
+  };
+
+  const onCascadeChange = (level: number, id: string) => {
+    const next = cascade.slice(0, level);
+    if (id) next[level] = id;
+    setCascade(next);
+    const levelOptions = buildCascadeLevels(tree, next)[level]?.options ?? [];
+    const node = levelOptions.find(item => item.id === id);
+    if (node && node.leaf) {
+      const labels = (findPath(tree, node.id) ?? [node]).map(item => item.name);
+      setValue("category_id", node.id, { shouldDirty: true });
+      setValue("category_label", labels.join(" › "), { shouldDirty: true });
+    } else {
+      setValue("category_id", "", { shouldDirty: true });
+      setValue("category_label", "", { shouldDirty: true });
+    }
+  };
+
+  const setAttr = (key: string, value: string | number | undefined) => {
+    setValue(
+      "attributes",
+      { ...(getValues("attributes") || {}), [key]: value },
+      { shouldDirty: true }
+    );
+  };
+
+  // Etapa 3 — validate + compress (Canvas) + upload each picked image.
+  const addFiles = async (files: FileList | File[]) => {
+    const incoming = Array.from(files);
+    if (incoming.length === 0) return;
+    setImageError(null);
+    const room = MAX_IMAGES - getValues("images").length;
+    if (room <= 0) {
+      setImageError(`Máximo de ${MAX_IMAGES} fotos atingido.`);
+      return;
+    }
+    setUploading(true);
+    const token = user ? await user.getIdToken().catch(() => null) : null;
+    for (const file of incoming.slice(0, room)) {
+      try {
+        const blob = await compressToWebp(file);
+        const uploaded = await uploadImage(blob, token);
+        setValue("images", [...getValues("images"), uploaded.url], { shouldDirty: true });
+      } catch (error: any) {
+        setImageError(
+          error?.response?.data?.detail || error?.message || "Falha ao enviar a imagem."
+        );
+      }
+    }
+    setUploading(false);
+  };
+
+  const removeImage = async (index: number) => {
+    const current = getValues("images");
+    const url = current[index];
+    setValue(
+      "images",
+      current.filter((_, i) => i !== index),
+      { shouldDirty: true }
+    );
+    if (url) {
+      const token = user ? await user.getIdToken().catch(() => null) : null;
+      deleteImage(url, token).catch(() => undefined);
+    }
+  };
+
+  const moveImage = (from: number, to: number) => {
+    const images = [...getValues("images")];
+    const [moved] = images.splice(from, 1);
+    images.splice(to, 0, moved);
+    setValue("images", images, { shouldDirty: true });
+  };
+
+  // Step validity: Zod per step, plus dynamic required-attribute checks on Etapa 2.
+  const stepIsValid = (index: number, snapshot: AdForm): boolean => {
+    if (!validateStep(index, snapshot).valid) return false;
+    if (index === 1 && attrSchema) {
+      return Object.keys(validateAttributes(attrSchema.fields, snapshot.attributes)).length === 0;
+    }
+    return true;
+  };
+
+  const { errors: stepErrors } = validateStep(step, values);
+  const allValid = stepSchemas.every((_, index) => stepIsValid(index, values));
+
   const goStep = (target: number) => {
     const clamped = Math.max(0, Math.min(target, STEPS.length - 1));
     setStep(clamped);
@@ -129,12 +357,8 @@ export default function AnunciarPage() {
     }
   };
 
-  const { errors: stepErrors } = validateStep(step, values);
-  const allValid = stepSchemas.every((_, index) => validateStep(index, values).valid);
-
   const next = () => {
-    const { valid } = validateStep(step, getValues());
-    if (!valid) {
+    if (!stepIsValid(step, getValues())) {
       setShowErrors(true);
       return;
     }
@@ -146,6 +370,13 @@ export default function AnunciarPage() {
     setStep(0);
     setShowErrors(false);
     setDone(false);
+    setCascade([]);
+    setSuggestions([]);
+    setAttrSchema(null);
+    setImageError(null);
+    setGeoInfo(null);
+    setPublishError(null);
+    setPublishedId(null);
     try {
       localStorage.removeItem(DRAFT_KEY);
     } catch {
@@ -161,12 +392,57 @@ export default function AnunciarPage() {
     }
   };
 
-  const finish = () => {
+  const finish = async () => {
     if (!allValid) {
       setShowErrors(true);
       return;
     }
-    setDone(true);
+    if (!user) {
+      setPublishError("Inicie sessão para publicar o anúncio.");
+      return;
+    }
+    setPublishing(true);
+    setPublishError(null);
+    try {
+      const token = await user.getIdToken();
+      const created = await publishListing(token, adFormToListingPayload(getValues()));
+      // Listing is live — drop the draft (local + server).
+      try {
+        localStorage.removeItem(DRAFT_KEY);
+      } catch {
+        // ignore
+      }
+      await deleteDraft(token).catch(() => undefined);
+      setPublishedId(created.id);
+      setDone(true);
+    } catch (error: any) {
+      const status = error?.response?.status;
+      const detail = error?.response?.data?.detail;
+      if (status === 422 && Array.isArray(detail)) {
+        const issue = detail.find((item: any) => {
+          const field = item?.loc?.[item.loc.length - 1];
+          return typeof field === "string" && field in LISTING_FIELD_STEP;
+        });
+        if (issue) {
+          const field = issue.loc[issue.loc.length - 1] as string;
+          goStep(LISTING_FIELD_STEP[field]);
+          setShowErrors(true);
+          setPublishError(`Campo inválido: ${field} — ${issue.msg}`);
+        } else {
+          setPublishError("Há campos inválidos. Reveja o formulário.");
+        }
+      } else if (status === 401) {
+        setPublishError("Sessão expirada. Inicie sessão novamente para publicar.");
+      } else {
+        setPublishError(
+          (typeof detail === "string" && detail) ||
+            error?.message ||
+            "Falha ao publicar o anúncio."
+        );
+      }
+    } finally {
+      setPublishing(false);
+    }
   };
 
   const err = (field: keyof AdForm) =>
@@ -240,32 +516,66 @@ export default function AnunciarPage() {
                   </span>
                 </div>
               </div>
-              <div>
+
+              {/* Sugestões automáticas pelo título (NLP/keywords) */}
+              {suggestions.length > 0 ? (
+                <div className="space-y-1.5">
+                  <span className="text-[11px] text-slate-400">Sugestões para o seu título</span>
+                  <div className="flex flex-wrap gap-2">
+                    {suggestions.map(suggestion => {
+                      const active = suggestion.category_id === values.category_id;
+                      return (
+                        <button
+                          key={suggestion.category_id}
+                          type="button"
+                          onClick={() => applyCategory(suggestion.category_id)}
+                          className={`text-[11px] rounded-full px-3 py-1 border transition-colors ${
+                            active
+                              ? "bg-emerald-500 text-slate-950 border-emerald-500"
+                              : "border-emerald-500/40 text-emerald-200 hover:bg-emerald-500/10"
+                          }`}
+                        >
+                          {suggestion.path_labels.join(" › ")}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : null}
+
+              {/* Seletor em cascata */}
+              <div className="space-y-2">
                 <label className="text-xs text-slate-400">Categoria</label>
-                <select
-                  value={values.category_id}
-                  onChange={event => {
-                    const option = leafOptions.find(item => item.id === event.target.value);
-                    setValue("category_id", event.target.value, { shouldDirty: true });
-                    setValue("category_label", option?.label ?? "", { shouldDirty: true });
-                  }}
-                  className={`${inputClass} cursor-pointer`}
-                >
-                  <option value="">Selecione…</option>
-                  {tree.map(root => (
-                    <optgroup key={root.id} label={root.name}>
-                      {collectLeaves(root, root.name).map(leaf => (
-                        <option key={leaf.id} value={leaf.id}>
-                          {leaf.name}
+                {tree.length === 0 ? (
+                  <p className="text-[11px] text-amber-300/80">
+                    A carregar taxonomia… (verifique se o backend está acessível)
+                  </p>
+                ) : (
+                  <div className="grid sm:grid-cols-2 gap-2">
+                    {cascadeLevels.map((level, index) => (
+                      <select
+                        key={index}
+                        value={level.value}
+                        onChange={event => onCascadeChange(index, event.target.value)}
+                        className={`${inputClass} cursor-pointer`}
+                      >
+                        <option value="">
+                          {index === 0 ? "Categoria…" : "Subcategoria…"}
                         </option>
-                      ))}
-                    </optgroup>
-                  ))}
-                </select>
+                        {level.options.map(option => (
+                          <option key={option.id} value={option.id}>
+                            {option.name}
+                            {option.leaf ? "" : " ›"}
+                          </option>
+                        ))}
+                      </select>
+                    ))}
+                  </div>
+                )}
+                {values.category_label ? (
+                  <p className="text-[11px] text-emerald-300/80">{values.category_label}</p>
+                ) : null}
                 {err("category_id")}
-                <p className="text-[11px] text-slate-500 mt-1">
-                  Fase 3: sugestão automática pelo título + seletor em cascata.
-                </p>
               </div>
             </div>
           ) : null}
@@ -273,6 +583,11 @@ export default function AnunciarPage() {
           {/* Step 2 — Ficha técnica */}
           {step === 1 ? (
             <div className="space-y-4">
+              {values.category_label ? (
+                <p className="text-[11px] text-slate-400">
+                  Ficha técnica · <span className="text-emerald-300">{values.category_label}</span>
+                </p>
+              ) : null}
               <div>
                 <span className="text-xs text-slate-400">Condição do artigo</span>
                 <div className="grid sm:grid-cols-2 gap-2 mt-1.5">
@@ -292,6 +607,70 @@ export default function AnunciarPage() {
                 </div>
                 {err("condition")}
               </div>
+
+              {/* Atributos dinâmicos (esquema por categoria) */}
+              {attrLoading ? (
+                <p className="text-[11px] text-slate-500">A carregar ficha técnica…</p>
+              ) : attrSchema && attrSchema.fields.length > 0 ? (
+                <div className="grid sm:grid-cols-2 gap-3">
+                  {attrSchema.fields.map(field => {
+                    const value = values.attributes?.[field.key] ?? "";
+                    const fieldError = showErrors ? attrErrors[field.key] : undefined;
+                    return (
+                      <div key={field.key} className={field.type === "select" ? "sm:col-span-1" : ""}>
+                        <label className="text-xs text-slate-400">
+                          {field.label}
+                          {field.required ? <span className="text-red-300"> *</span> : null}
+                          {field.unit ? <span className="text-slate-500"> ({field.unit})</span> : null}
+                        </label>
+                        {field.type === "select" ? (
+                          <select
+                            value={String(value)}
+                            onChange={event => setAttr(field.key, event.target.value || undefined)}
+                            className={`${inputClass} cursor-pointer`}
+                          >
+                            <option value="">Selecione…</option>
+                            {(field.options ?? []).map(option => (
+                              <option key={option} value={option}>
+                                {option}
+                              </option>
+                            ))}
+                          </select>
+                        ) : field.type === "number" ? (
+                          <input
+                            type="number"
+                            value={value === undefined || value === null ? "" : String(value)}
+                            placeholder={field.placeholder ?? ""}
+                            onChange={event =>
+                              setAttr(
+                                field.key,
+                                event.target.value === "" ? undefined : Number(event.target.value)
+                              )
+                            }
+                            className={inputClass}
+                          />
+                        ) : (
+                          <input
+                            type="text"
+                            value={String(value)}
+                            placeholder={field.placeholder ?? ""}
+                            onChange={event => setAttr(field.key, event.target.value)}
+                            className={inputClass}
+                          />
+                        )}
+                        {fieldError ? (
+                          <p className="text-[11px] text-red-300 mt-1">{fieldError}</p>
+                        ) : null}
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : !values.category_id ? (
+                <p className="text-[11px] text-amber-300/80">
+                  Escolha uma categoria na etapa anterior para ver a ficha técnica.
+                </p>
+              ) : null}
+
               <div>
                 <label className="text-xs text-slate-400">Descrição</label>
                 <textarea
@@ -303,21 +682,96 @@ export default function AnunciarPage() {
                 />
                 {err("description")}
               </div>
-              <p className="text-[11px] text-slate-500">
-                Fase 3: ficha técnica dinâmica (marca, potência, etc.) conforme a categoria escolhida.
-              </p>
             </div>
           ) : null}
 
           {/* Step 3 — Galeria */}
           {step === 2 ? (
             <div className="space-y-3">
-              <div className="rounded-lg border border-dashed border-slate-700 p-8 text-center text-sm text-slate-400">
-                Galeria de imagens (drag-and-drop, compressão e reordenação)
-                <div className="text-[11px] text-slate-500 mt-1">
-                  Pipeline de upload chega na Fase 4. Pode avançar por agora.
-                </div>
+              <div
+                onDragOver={event => {
+                  event.preventDefault();
+                  setDragOver(true);
+                }}
+                onDragLeave={() => setDragOver(false)}
+                onDrop={event => {
+                  event.preventDefault();
+                  setDragOver(false);
+                  addFiles(event.dataTransfer.files);
+                }}
+                className={`rounded-lg border-2 border-dashed p-6 text-center transition-colors ${
+                  dragOver ? "border-emerald-500 bg-emerald-500/5" : "border-slate-700"
+                }`}
+              >
+                <p className="text-sm text-slate-300">
+                  Arraste fotos para aqui ou{" "}
+                  <label className="cursor-pointer text-emerald-300 hover:text-emerald-200 font-semibold">
+                    escolha ficheiros
+                    <input
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp"
+                      multiple
+                      className="hidden"
+                      onChange={event => {
+                        if (event.target.files) addFiles(event.target.files);
+                        event.target.value = "";
+                      }}
+                    />
+                  </label>
+                </p>
+                <p className="text-[11px] text-slate-500 mt-2">
+                  Até {MAX_IMAGES} fotos · WebP/PNG/JPEG · máx. 5MB · mín. 800×600px
+                </p>
               </div>
+
+              {uploading ? (
+                <p className="text-[11px] text-emerald-300">A processar e enviar imagens…</p>
+              ) : null}
+              {imageError ? <p className="text-[11px] text-red-300">{imageError}</p> : null}
+              {err("images")}
+
+              {values.images.length > 0 ? (
+                <>
+                  <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+                    {values.images.map((url, index) => (
+                      <div
+                        key={url}
+                        draggable
+                        onDragStart={() => {
+                          dragIndex.current = index;
+                        }}
+                        onDragOver={event => event.preventDefault()}
+                        onDrop={() => {
+                          if (dragIndex.current !== null && dragIndex.current !== index) {
+                            moveImage(dragIndex.current, index);
+                          }
+                          dragIndex.current = null;
+                        }}
+                        className="relative group aspect-square rounded-lg overflow-hidden border border-slate-700 cursor-move"
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={url} alt="" className="w-full h-full object-cover" />
+                        {index === 0 ? (
+                          <span className="absolute top-1 left-1 text-[9px] font-bold bg-emerald-500 text-slate-950 px-1.5 py-0.5 rounded">
+                            Capa
+                          </span>
+                        ) : null}
+                        <button
+                          type="button"
+                          onClick={() => removeImage(index)}
+                          className="absolute top-1 right-1 h-5 w-5 grid place-items-center rounded-full bg-black/60 text-white text-xs leading-none opacity-0 group-hover:opacity-100 transition-opacity"
+                          aria-label="Remover foto"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-[11px] text-slate-500">
+                    Arraste as miniaturas para reordenar. A primeira foto é a capa do anúncio.
+                  </p>
+                </>
+              ) : null}
             </div>
           ) : null}
 
@@ -348,15 +802,20 @@ export default function AnunciarPage() {
               </div>
               <div className="grid sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="text-xs text-slate-400">Preço (€)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    {...register("price_eur", { valueAsNumber: true })}
-                    className={inputClass}
-                    placeholder="0,00"
-                  />
+                  <label className="text-xs text-slate-400">Preço</label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400">€</span>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={euroToDisplay(values.price_eur)}
+                      onChange={event =>
+                        setValue("price_eur", displayToEuro(event.target.value), { shouldDirty: true })
+                      }
+                      className={`${inputClass} pl-7 text-right`}
+                      placeholder="0,00"
+                    />
+                  </div>
                   {err("price_eur")}
                 </div>
                 <div>
@@ -371,7 +830,7 @@ export default function AnunciarPage() {
                 </div>
               </div>
               <p className="text-[11px] text-slate-500">
-                Fase 5: máscara de moeda e regras de exposição por plano.
+                Para venda casual entre particulares, mantenha a quantidade em 1.
               </p>
             </div>
           ) : null}
@@ -382,7 +841,17 @@ export default function AnunciarPage() {
               <div className="grid sm:grid-cols-2 gap-4">
                 <div>
                   <label className="text-xs text-slate-400">Código postal</label>
-                  <input {...register("postal_code")} className={inputClass} placeholder="1000-100" />
+                  <input
+                    {...register("postal_code")}
+                    className={inputClass}
+                    placeholder="1000-100"
+                    maxLength={8}
+                  />
+                  {geoLoading ? (
+                    <p className="text-[11px] text-slate-500 mt-1">A localizar…</p>
+                  ) : geoInfo ? (
+                    <p className="text-[11px] text-emerald-300/80 mt-1">📍 {geoInfo}</p>
+                  ) : null}
                   {err("postal_code")}
                 </div>
                 <div>
@@ -403,7 +872,8 @@ export default function AnunciarPage() {
                 </label>
               </div>
               <p className="text-[11px] text-slate-500">
-                Fase 5: preenchimento automático do bairro/cidade pelo código postal (Mapbox) e só Bairro/Cidade ficam públicos.
+                🔒 Por privacidade, o anúncio público mostra apenas a localidade (
+                {values.city || "ex.: Lisboa"}) — nunca a rua ou o número.
               </p>
             </div>
           ) : null}
@@ -438,19 +908,30 @@ export default function AnunciarPage() {
             ) : (
               <button
                 onClick={finish}
-                disabled={!allValid}
+                disabled={!allValid || publishing}
                 className="px-5 py-2 rounded-lg text-sm font-semibold text-slate-950 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                Concluir rascunho
+                {publishing ? "A publicar…" : "Publicar anúncio"}
               </button>
             )}
           </div>
         </div>
 
-        {done ? (
-          <div className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 p-4 text-sm text-emerald-200">
-            Rascunho completo e válido. A publicação real do anúncio (POST do anúncio,
-            sanitização e exibição no marketplace) chega na Fase 6.
+        {publishError ? (
+          <div className="rounded-lg border border-red-500/40 bg-red-950/30 p-4 text-sm text-red-200">
+            {publishError}
+          </div>
+        ) : null}
+
+        {done && publishedId ? (
+          <div className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 p-4 text-sm text-emerald-200 flex items-center justify-between gap-3">
+            <span>Anúncio publicado com sucesso! 🎉</span>
+            <Link
+              href="/marketplace"
+              className="font-semibold text-emerald-300 hover:text-emerald-200 whitespace-nowrap"
+            >
+              Ver no marketplace →
+            </Link>
           </div>
         ) : null}
       </div>

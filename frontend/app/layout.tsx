@@ -3,6 +3,7 @@ import "mapbox-gl/dist/mapbox-gl.css";
 import type { Metadata } from "next";
 import "../styles/globals.css";
 import { AuthProvider } from "@/lib/auth";
+import { RealtimeProvider } from "@/lib/realtime";
 
 export const metadata: Metadata = {
   title: "Reisolari",
@@ -17,7 +18,9 @@ export default function RootLayout({
   return (
     <html lang="pt">
       <body>
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider>
+          <RealtimeProvider>{children}</RealtimeProvider>
+        </AuthProvider>
       </body>
     </html>
   );

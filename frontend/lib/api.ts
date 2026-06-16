@@ -141,3 +141,60 @@ export async function fetchCategoryTree(): Promise<CategoryNode[]> {
   const res = await axios.get<CategoryNode[]>(`${backendUrl}/api/v1/categories/`);
   return res.data;
 }
+
+export type CategorySuggestion = {
+  category_id: string;
+  name: string;
+  path: string[];
+  path_labels: string[];
+  score: number;
+};
+
+/** NLP/keyword category suggestions from a free-text title (Etapa 1). */
+export async function fetchCategorySuggestions(
+  title: string
+): Promise<CategorySuggestion[]> {
+  const trimmed = title.trim();
+  if (trimmed.length < 2) return [];
+  const res = await axios.get<CategorySuggestion[]>(
+    `${backendUrl}/api/v1/categories/suggest`,
+    { params: { title: trimmed } }
+  );
+  return res.data;
+}
+
+export type AttributeFieldType = "text" | "number" | "select";
+
+export type AttributeField = {
+  key: string;
+  label: string;
+  type: AttributeFieldType;
+  required: boolean;
+  options?: string[] | null;
+  unit?: string | null;
+  placeholder?: string | null;
+};
+
+export type AttributeSchema = {
+  schema_key: string;
+  fields: AttributeField[];
+  version: number;
+};
+
+/**
+ * Dynamic technical-sheet schema for a leaf category (Etapa 2).
+ * Returns null for non-leaf categories (409) or unknown ids (404).
+ */
+export async function fetchCategoryAttributes(
+  categoryId: string
+): Promise<AttributeSchema | null> {
+  if (!categoryId) return null;
+  try {
+    const res = await axios.get<AttributeSchema>(
+      `${backendUrl}/api/v1/categories/${encodeURIComponent(categoryId)}/attributes`
+    );
+    return res.data;
+  } catch {
+    return null;
+  }
+}

@@ -2,24 +2,31 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import axios from "axios";
 import { useCart } from "@/lib/cart";
+import { useAuth } from "@/lib/auth";
 import CartDrawer from "@/components/CartDrawer";
 import StoreCatalog from "@/components/StoreCatalog";
 import AuthHeaderButtons from "@/components/AuthHeaderButtons";
 import AnunciarButton from "@/components/AnunciarButton";
+import NotificationsBell from "@/components/NotificationsBell";
+import { createRoom, sendMessage } from "@/lib/chat";
+import { addFavorite, getFavoriteIds, removeFavorite } from "@/lib/favorites";
 
 type Listing = {
   id: string;
+  owner_id: string;
   title: string;
   description: string;
   price_cents: number;
   currency: string;
-  condition: "new" | "used" | "refurbished";
-  manufacturer?: string | null;
-  model?: string | null;
-  power_w?: number | null;
+  condition: "novo" | "usado_como_novo" | "usado_sinais" | "pecas";
+  category_path: string[];
+  listing_type: "classico" | "premium";
+  city?: string | null;
   image_urls: string[];
+  favorites_count: number;
   created_at: string;
 };
 
@@ -37,9 +44,10 @@ type OLXAd = {
 };
 
 const conditionLabels: Record<Listing["condition"], string> = {
-  new: "Novo",
-  used: "Usado",
-  refurbished: "Recondicionado"
+  novo: "Novo",
+  usado_como_novo: "Como novo",
+  usado_sinais: "Usado",
+  pecas: "Para peças"
 };
 
 const formatPrice = (cents: number, currency: string) =>
@@ -72,6 +80,11 @@ export default function MarketplacePage() {
 
   const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL?.replace(/\/$/, "") ?? "";
 
+  const { user } = useAuth();
+  const router = useRouter();
+  const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
+  const [actionBusy, setActionBusy] = useState<string | null>(null);
+
   // Retrieve coordinates on mount
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -101,6 +114,73 @@ export default function MarketplacePage() {
 
     loadListings();
   }, [backendUrl, condition]);
+
+  // Load which listings this user has favorited (for the heart state).
+  useEffect(() => {
+    if (!user) {
+      setFavoriteIds(new Set());
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const token = await user.getIdToken().catch(() => null);
+      if (!token || cancelled) return;
+      const ids = await getFavoriteIds(token).catch(() => []);
+      if (!cancelled) setFavoriteIds(new Set(ids));
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
+
+  const toggleFavorite = async (listing: Listing) => {
+    if (!user) {
+      router.push("/login");
+      return;
+    }
+    const token = await user.getIdToken();
+    const isFav = favoriteIds.has(listing.id);
+    try {
+      const result = isFav
+        ? await removeFavorite(token, listing.id)
+        : await addFavorite(token, listing.id);
+      setFavoriteIds(prev => {
+        const next = new Set(prev);
+        if (result.favorited) next.add(listing.id);
+        else next.delete(listing.id);
+        return next;
+      });
+      setListings(prev =>
+        prev.map(l => (l.id === listing.id ? { ...l, favorites_count: result.count } : l))
+      );
+    } catch {
+      // ignore transient errors
+    }
+  };
+
+  const openChat = async (listing: Listing, intent = false) => {
+    if (!user) {
+      router.push("/login");
+      return;
+    }
+    setActionBusy(listing.id);
+    try {
+      const token = await user.getIdToken();
+      const room = await createRoom(token, listing.id);
+      if (intent) {
+        await sendMessage(
+          token,
+          room.id,
+          `Olá! Tenho interesse em comprar "${listing.title}". Ainda está disponível?`
+        );
+      }
+      router.push(`/mensagens?room=${room.id}`);
+    } catch (err: any) {
+      setError(err?.response?.data?.detail || "Não foi possível abrir a conversa.");
+    } finally {
+      setActionBusy(null);
+    }
+  };
 
   // Fetch OLX listings
   useEffect(() => {
@@ -142,6 +222,7 @@ export default function MarketplacePage() {
           </div>
 
           <div className="flex items-center gap-2">
+            {user ? <NotificationsBell /> : null}
             <AnunciarButton />
             <AuthHeaderButtons />
             <Link
@@ -197,9 +278,10 @@ export default function MarketplacePage() {
                 className="bg-transparent text-slate-200 outline-none text-xs font-medium cursor-pointer"
               >
                 <option value="" className="bg-slate-950">Todos</option>
-                <option value="new" className="bg-slate-950">Novo</option>
-                <option value="used" className="bg-slate-950">Usado</option>
-                <option value="refurbished" className="bg-slate-950">Recondicionado</option>
+                <option value="novo" className="bg-slate-950">Novo</option>
+                <option value="usado_como_novo" className="bg-slate-950">Como novo</option>
+                <option value="usado_sinais" className="bg-slate-950">Usado</option>
+                <option value="pecas" className="bg-slate-950">Para peças</option>
               </select>
             </label>
           </div>
@@ -225,6 +307,18 @@ export default function MarketplacePage() {
                     <span className="absolute top-2 left-2 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
                       {conditionLabels[listing.condition]}
                     </span>
+                    {user && listing.owner_id === user.uid ? null : (
+                      <button
+                        onClick={() => toggleFavorite(listing)}
+                        className="absolute top-2 right-2 flex items-center gap-1 px-2 py-1 rounded-full bg-black/50 backdrop-blur hover:bg-black/70 transition-colors"
+                        aria-label="Adicionar aos favoritos"
+                      >
+                        <span aria-hidden>{favoriteIds.has(listing.id) ? "❤️" : "🤍"}</span>
+                        {listing.favorites_count > 0 ? (
+                          <span className="text-[10px] text-slate-200 font-semibold">{listing.favorites_count}</span>
+                        ) : null}
+                      </button>
+                    )}
                   </div>
                   <div className="p-4 space-y-2">
                     <div className="flex items-start justify-between gap-3">
@@ -233,11 +327,36 @@ export default function MarketplacePage() {
                         {formatPrice(listing.price_cents, listing.currency)}
                       </span>
                     </div>
-                    <div className="text-[10px] text-slate-500 font-mono">
-                      {listing.power_w ? `${listing.power_w} W` : ""}
-                      {listing.manufacturer ? ` | ${listing.manufacturer}` : ""}
+                    <div className="text-[10px] text-slate-500 flex items-center gap-1.5">
+                      {listing.listing_type === "premium" ? (
+                        <span className="px-1.5 py-0.5 rounded bg-amber-400/20 text-amber-300 font-bold">Premium</span>
+                      ) : null}
+                      <span className="truncate">
+                        {listing.category_path?.length ? listing.category_path.join(" › ") : ""}
+                        {listing.city ? ` · ${listing.city}` : ""}
+                      </span>
                     </div>
                     <p className="text-xs text-slate-300 line-clamp-2">{listing.description}</p>
+                    {user && listing.owner_id === user.uid ? (
+                      <p className="text-[10px] text-slate-500 pt-1">O seu anúncio</p>
+                    ) : (
+                      <div className="flex items-center gap-2 pt-1">
+                        <button
+                          onClick={() => openChat(listing, false)}
+                          disabled={actionBusy === listing.id}
+                          className="flex-1 px-2 py-1.5 rounded-lg text-xs font-semibold text-slate-200 bg-slate-800 border border-slate-700 hover:border-emerald-700 hover:text-emerald-300 disabled:opacity-50 transition-colors"
+                        >
+                          💬 Mensagem
+                        </button>
+                        <button
+                          onClick={() => openChat(listing, true)}
+                          disabled={actionBusy === listing.id}
+                          className="flex-1 px-2 py-1.5 rounded-lg text-xs font-semibold text-slate-950 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 transition-colors"
+                        >
+                          🛒 Comprar
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </article>
               ))}

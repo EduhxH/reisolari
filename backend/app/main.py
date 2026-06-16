@@ -3,9 +3,13 @@ import logging
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
-from app.api.v1 import auth, listings, simulation, payments, chat, products, orders, categories, seller
-from app.websocket.chat_ws import router as chat_ws_router
+from app.api.v1 import (
+    auth, listings, simulation, payments, chat, products, orders, categories,
+    seller, media, favorites, notifications,
+)
+from app.websocket.stream_ws import router as stream_ws_router
 from app.core.logging_config import setup_logging
 from app.db.mongo import init_indexes
 from app.services.catalog import seed_catalog
@@ -55,5 +59,11 @@ app.include_router(products.router, prefix="/api/v1/products", tags=["products"]
 app.include_router(orders.router, prefix="/api/v1/orders", tags=["orders"])
 app.include_router(categories.router, prefix="/api/v1/categories", tags=["categories"])
 app.include_router(seller.router, prefix="/api/v1/seller", tags=["seller"])
+app.include_router(media.router, prefix="/api/v1/media", tags=["media"])
 app.include_router(chat.router, prefix="/api/v1/chat", tags=["chat"])
-app.include_router(chat_ws_router, prefix="/ws", tags=["websocket"])
+app.include_router(favorites.router, prefix="/api/v1/favorites", tags=["favorites"])
+app.include_router(notifications.router, prefix="/api/v1/notifications", tags=["notifications"])
+app.include_router(stream_ws_router, prefix="/ws", tags=["websocket"])
+
+# Serve uploaded listing images (dev-grade local storage; see app/api/v1/media.py).
+app.mount("/media", StaticFiles(directory=str(media.UPLOAD_DIR)), name="media")

@@ -51,3 +51,16 @@ export async function saveDraft(
 export async function deleteDraft(idToken: string): Promise<void> {
   await axios.delete(`${backendUrl}/api/v1/seller/drafts`, authHeader(idToken));
 }
+
+/** Publish the finished listing (Fase 6). Returns the created listing id. */
+export async function publishListing(
+  idToken: string,
+  payload: Record<string, any>
+): Promise<{ id: string }> {
+  const res = await axios.post(
+    `${backendUrl}/api/v1/listings/`,
+    payload,
+    authHeader(idToken)
+  );
+  return res.data;
+}

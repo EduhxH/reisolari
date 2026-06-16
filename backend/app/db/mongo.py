@@ -33,9 +33,13 @@ async def init_indexes() -> None:
     await db.categories.create_index([("parent_id", ASCENDING), ("order", ASCENDING)])
     await db.categories.create_index([("path", ASCENDING)])
     await db.chat_rooms.create_index(
-        [("listing_id", ASCENDING), ("buyer_id", ASCENDING), ("seller_id", ASCENDING)],
+        [("listing_id", ASCENDING), ("buyer_uid", ASCENDING), ("seller_uid", ASCENDING)],
         unique=True,
     )
-    await db.chat_rooms.create_index([("buyer_id", ASCENDING), ("created_at", DESCENDING)])
-    await db.chat_rooms.create_index([("seller_id", ASCENDING), ("created_at", DESCENDING)])
-    await db.chat_messages.create_index([("room_id", ASCENDING)])
+    await db.chat_rooms.create_index([("buyer_uid", ASCENDING), ("last_message_at", DESCENDING)])
+    await db.chat_rooms.create_index([("seller_uid", ASCENDING), ("last_message_at", DESCENDING)])
+    await db.chat_messages.create_index([("room_id", ASCENDING), ("created_at", ASCENDING)])
+    await db.favorites.create_index([("user_uid", ASCENDING), ("listing_id", ASCENDING)], unique=True)
+    await db.favorites.create_index([("user_uid", ASCENDING), ("created_at", DESCENDING)])
+    await db.notifications.create_index([("user_uid", ASCENDING), ("created_at", DESCENDING)])
+    await db.notifications.create_index([("user_uid", ASCENDING), ("read", ASCENDING)])
