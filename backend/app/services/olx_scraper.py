@@ -41,8 +41,6 @@ class OLXAd(BaseModel):
     url: str
     image_url: Optional[str] = None
     seller_name: str
-    seller_rating: float
-    seller_reviews_count: int
     location: str
     created_at: str
 
@@ -154,20 +152,10 @@ async def fetch_olx_ads(latitude: Optional[float] = None, longitude: Optional[fl
             else:
                 price_cents = 0
 
-            # Seller & Deterministic Ratings
+            # Seller — only the real data OLX exposes (no fabricated ratings).
             contact_data = ad.get("contact", {})
             user_data = ad.get("user", {})
             seller_name = user_data.get("name") or contact_data.get("name") or "Vendedor Particular"
-
-            # Deterministic rating and review count based on user_id (or ad_id if user_id is missing)
-            user_id = user_data.get("id") or ad_id
-            
-            # Simple formula to calculate a consistent rating between 4.1 and 5.0
-            # 4.1 + (user_id % 10) / 10.0 -> results in 4.1 to 5.0
-            rating = 4.1 + float(user_id % 10) * 0.1
-            rating = round(min(5.0, max(4.0, rating)), 1)
-            
-            reviews_count = (user_id % 73) + 5
 
             created_at = ad.get("createdTime", "")
 
@@ -181,8 +169,6 @@ async def fetch_olx_ads(latitude: Optional[float] = None, longitude: Optional[fl
                     url=ad_url,
                     image_url=image_url,
                     seller_name=seller_name,
-                    seller_rating=rating,
-                    seller_reviews_count=reviews_count,
                     location=location,
                     created_at=created_at,
                 )

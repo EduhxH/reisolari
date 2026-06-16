@@ -24,6 +24,14 @@ async def init_indexes() -> None:
     await db.payments.create_index([("stripe_session_id", ASCENDING)], unique=True)
     await db.payments.create_index([("buyer_id", ASCENDING), ("created_at", DESCENDING)])
     await db.payments.create_index([("seller_id", ASCENDING), ("created_at", DESCENDING)])
+    await db.products.create_index([("slug", ASCENDING)], unique=True)
+    await db.products.create_index([("active", ASCENDING), ("category", ASCENDING), ("price_cents", ASCENDING)])
+    await db.orders.create_index([("order_number", ASCENDING)], unique=True)
+    await db.orders.create_index([("stripe_session_id", ASCENDING)])
+    await db.orders.create_index([("customer.email", ASCENDING), ("created_at", DESCENDING)])
+    await db.orders.create_index([("firebase_uid", ASCENDING), ("created_at", DESCENDING)])
+    await db.categories.create_index([("parent_id", ASCENDING), ("order", ASCENDING)])
+    await db.categories.create_index([("path", ASCENDING)])
     await db.chat_rooms.create_index(
         [("listing_id", ASCENDING), ("buyer_id", ASCENDING), ("seller_id", ASCENDING)],
         unique=True,

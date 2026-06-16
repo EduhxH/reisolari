@@ -6,6 +6,7 @@ import AgentAnalysisPanel from "@/components/AgentAnalysisPanel";
 import GdprConsent from "@/components/GdprConsent";
 import MapSolar from "@/components/MapSolar";
 import SimulationPanel from "@/components/SimulationPanel";
+import AuthHeaderButtons from "@/components/AuthHeaderButtons";
 
 export default function DashboardPage() {
   const [areaM2, setAreaM2] = useState(0);
@@ -25,9 +26,12 @@ export default function DashboardPage() {
           <h1 className="text-2xl font-semibold">Reisolari</h1>
           <p className="text-sm text-slate-400">Marketplace P2P e simulador solar para Portugal</p>
         </div>
-        <Link href="/marketplace" className="text-sm text-emerald-300 hover:text-emerald-200">
-          Ver marketplace
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link href="/marketplace" className="text-sm text-emerald-300 hover:text-emerald-200">
+            Ver marketplace
+          </Link>
+          <AuthHeaderButtons />
+        </div>
       </div>
       <div className="grid lg:grid-cols-[2fr,1fr] gap-6">
         <MapSolar onPolygonChange={handlePolygonChange} />

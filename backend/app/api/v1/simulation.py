@@ -5,6 +5,7 @@ from app.services.physics import compute_annual_energy, PhysicsInput
 from app.services.fiscal import compute_fiscal_and_roi, FiscalInput
 from app.services.ai_orchestrator import orchestrator
 from app.services.panel_recommender import recommend_panels
+from app.services.catalog import get_panel_specs_from_products
 from app.db.mongo import get_db_client
 
 router = APIRouter()
@@ -35,13 +36,14 @@ async def run_simulation(payload: SimulationRequest):
 
     fiscal_input = FiscalInput(
         region=payload.region_type,
-        panel_system_cost_eur=payload.installed_power_kwp * 900,  # 900 €/kWp (valor típico)
-        battery_cost_eur=2000.0,  # exemplo de bateria
+        panel_system_cost_eur=payload.installed_power_kwp * payload.cost_per_kwp_eur,
+        battery_cost_eur=payload.battery_cost_eur,
         annual_energy_kwh=physics_res.annual_energy_kwh,
         electricity_price_eur_kwh=payload.electricity_price_eur_kwh,
         has_social_tariff=payload.has_social_tariff,
     )
     fiscal_res = compute_fiscal_and_roi(fiscal_input)
+    panel_catalog = await get_panel_specs_from_products()
     recommendations = recommend_panels(
         roof_area_m2=payload.area_m2,
         target_power_kwp=payload.installed_power_kwp,
@@ -49,6 +51,7 @@ async def run_simulation(payload: SimulationRequest):
         performance_ratio=payload.performance_ratio,
         electricity_price_eur_kwh=payload.electricity_price_eur_kwh,
         has_social_tariff=payload.has_social_tariff,
+        catalog=panel_catalog,
     )
 
     orchestrator_payload = {

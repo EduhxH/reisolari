@@ -5,54 +5,6 @@ import math
 from app.schemas.panel import PanelRecommendation, PanelSpec
 
 
-DEFAULT_PANEL_CATALOG: list[PanelSpec] = [
-    PanelSpec(
-        code="mono-perc-410-used",
-        name="Used monocrystalline 410 W class",
-        power_w=410,
-        width_mm=1134,
-        height_mm=1722,
-        efficiency=0.210,
-        avg_price_eur=95,
-        category="used_value",
-        source_note="Representative used-market class; update prices from PT marketplace sources before procurement.",
-    ),
-    PanelSpec(
-        code="topcon-450-new",
-        name="New TOPCon 450 W high-efficiency class",
-        power_w=450,
-        width_mm=1134,
-        height_mm=1762,
-        efficiency=0.225,
-        avg_price_eur=145,
-        category="new_efficiency",
-        source_note="Representative modern TOPCon class for simulation and recommendation ranking.",
-    ),
-    PanelSpec(
-        code="mono-370-budget",
-        name="Budget monocrystalline 370 W class",
-        power_w=370,
-        width_mm=1038,
-        height_mm=1755,
-        efficiency=0.203,
-        avg_price_eur=75,
-        category="budget",
-        source_note="Representative lower-cost module class, useful for second-hand scenarios.",
-    ),
-    PanelSpec(
-        code="large-format-500",
-        name="Large format 500 W class",
-        power_w=500,
-        width_mm=1134,
-        height_mm=2094,
-        efficiency=0.211,
-        avg_price_eur=165,
-        category="max_power",
-        source_note="Representative large-format module; check roof handling and wind constraints before installation.",
-    ),
-]
-
-
 def recommend_panels(
     roof_area_m2: float,
     target_power_kwp: float,
@@ -60,15 +12,15 @@ def recommend_panels(
     performance_ratio: float,
     electricity_price_eur_kwh: float,
     has_social_tariff: bool,
-    catalog: list[PanelSpec] | None = None,
+    catalog: list[PanelSpec],
     packing_factor: float = 0.78,
     spacing_m: float = 0.05,
     max_items: int = 3,
 ) -> list[PanelRecommendation]:
-    if roof_area_m2 <= 0:
+    if roof_area_m2 <= 0 or not catalog:
         return []
 
-    panel_catalog = catalog or DEFAULT_PANEL_CATALOG
+    panel_catalog = catalog
     usable_area = roof_area_m2 * packing_factor
     effective_price = electricity_price_eur_kwh * (1 - 0.338 if has_social_tariff else 1)
     recommendations: list[PanelRecommendation] = []

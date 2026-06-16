@@ -1,7 +1,13 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import Link from "next/link";
 import axios from "axios";
+import { useCart } from "@/lib/cart";
+import CartDrawer from "@/components/CartDrawer";
+import StoreCatalog from "@/components/StoreCatalog";
+import AuthHeaderButtons from "@/components/AuthHeaderButtons";
+import AnunciarButton from "@/components/AnunciarButton";
 
 type Listing = {
   id: string;
@@ -26,8 +32,6 @@ type OLXAd = {
   url: string;
   image_url: string | null;
   seller_name: string;
-  seller_rating: number;
-  seller_reviews_count: number;
   location: string;
   created_at: string;
 };
@@ -44,10 +48,13 @@ const formatPrice = (cents: number, currency: string) =>
     currency: currency.toUpperCase()
   }).format(cents / 100);
 
+type Tab = "store" | "internal" | "olx";
+
 export default function MarketplacePage() {
-  // Tabs: 'internal' or 'olx'
-  const [activeTab, setActiveTab] = useState<"internal" | "olx">("internal");
-  
+  const { count, isHydrated } = useCart();
+  const [cartOpen, setCartOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<Tab>("store");
+
   // Internal listings state
   const [listings, setListings] = useState<Listing[]>([]);
   const [condition, setCondition] = useState("");
@@ -59,7 +66,7 @@ export default function MarketplacePage() {
   const [olxLoading, setOlxLoading] = useState(false);
   const [olxError, setOlxError] = useState<string | null>(null);
   const [searchDistrict, setSearchDistrict] = useState("Portugal");
-  
+
   // Location coordinates from localStorage
   const [coords, setCoords] = useState<{ lat: number; lon: number } | null>(null);
 
@@ -119,54 +126,66 @@ export default function MarketplacePage() {
     loadOlxListings();
   }, [backendUrl, coords]);
 
-  const renderStars = (rating: number, count: number) => {
-    const fullStars = Math.round(rating);
-    return (
-      <div className="flex items-center gap-0.5 text-amber-400" title={`Classificação do vendedor: ${rating}/5`}>
-        {Array.from({ length: 5 }).map((_, idx) => (
-          <span key={idx} className="text-xs">
-            {idx < fullStars ? "★" : "☆"}
-          </span>
-        ))}
-        <span className="text-[10px] text-slate-500 ml-1 font-mono">({count})</span>
-      </div>
-    );
-  };
+  const tabs: { id: Tab; label: string }[] = [
+    { id: "store", label: "Loja Reisolari" },
+    { id: "internal", label: "Mercado P2P" },
+    { id: "olx", label: "Usados no OLX" }
+  ];
 
   return (
     <main className="min-h-screen bg-bg text-slate-100 p-6 space-y-6">
-      <header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between border-b border-slate-800 pb-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-white">Marketplace solar</h1>
-          <p className="text-sm text-slate-400">Compre painéis solares novos e usados diretamente ou explore anúncios regionais do OLX.</p>
+      <header className="flex flex-col gap-4 border-b border-slate-800 pb-4">
+        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-white">Marketplace solar</h1>
+            <p className="text-sm text-slate-400">Compre painéis solares novos com carrinho e checkout, ou explore o mercado P2P e anúncios do OLX.</p>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <AnunciarButton />
+            <AuthHeaderButtons />
+            <Link
+              href="/"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold text-slate-300 bg-slate-900 border border-slate-800 hover:border-emerald-700 hover:text-emerald-300 transition-colors"
+            >
+              ← Voltar para simulador
+            </Link>
+            <button
+              onClick={() => setCartOpen(true)}
+              className="relative flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold text-slate-950 bg-emerald-500 hover:bg-emerald-400 transition-colors"
+              aria-label="Abrir carrinho"
+            >
+              🛒 Carrinho
+              {isHydrated && count > 0 ? (
+                <span className="absolute -top-2 -right-2 min-w-[18px] h-[18px] px-1 grid place-items-center rounded-full bg-amber-400 text-slate-950 text-[10px] font-bold">
+                  {count}
+                </span>
+              ) : null}
+            </button>
+          </div>
         </div>
-        
+
         {/* Tab Switcher */}
-        <div className="flex bg-slate-900 p-1 rounded-lg border border-slate-800">
-          <button
-            onClick={() => setActiveTab("internal")}
-            className={`px-4 py-1.5 rounded-md text-xs font-semibold transition-all ${
-              activeTab === "internal"
-                ? "bg-slate-800 text-emerald-400 shadow-sm"
-                : "text-slate-400 hover:text-slate-200"
-            }`}
-          >
-            Mercado P2P Interno
-          </button>
-          <button
-            onClick={() => setActiveTab("olx")}
-            className={`px-4 py-1.5 rounded-md text-xs font-semibold transition-all ${
-              activeTab === "olx"
-                ? "bg-slate-800 text-emerald-400 shadow-sm"
-                : "text-slate-400 hover:text-slate-200"
-            }`}
-          >
-            Usados no OLX
-          </button>
+        <div className="flex bg-slate-900 p-1 rounded-lg border border-slate-800 self-start">
+          {tabs.map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`px-4 py-1.5 rounded-md text-xs font-semibold transition-all ${
+                activeTab === tab.id
+                  ? "bg-slate-800 text-emerald-400 shadow-sm"
+                  : "text-slate-400 hover:text-slate-200"
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
         </div>
       </header>
 
-      {activeTab === "internal" ? (
+      {activeTab === "store" ? (
+        <StoreCatalog />
+      ) : activeTab === "internal" ? (
         <div className="space-y-4">
           <div className="flex justify-between items-center">
             <h2 className="text-lg font-semibold text-slate-200">Painéis de Vendedores Reisolari</h2>
@@ -296,12 +315,14 @@ export default function MarketplacePage() {
                       </p>
                     </div>
 
-                    {/* Seller Name and Stars Rating */}
+                    {/* Seller name + location (real OLX data only) */}
                     <div className="flex justify-between items-center text-xs border-t border-slate-800/80 pt-2.5 mt-auto">
-                      <span className="text-slate-300 font-medium truncate max-w-[140px]" title={ad.seller_name}>
+                      <span className="text-slate-300 font-medium truncate max-w-[150px]" title={ad.seller_name}>
                         {ad.seller_name}
                       </span>
-                      {renderStars(ad.seller_rating, ad.seller_reviews_count)}
+                      <span className="text-[10px] text-slate-500 truncate max-w-[120px]" title={ad.location}>
+                        {ad.location.split(",")[0]}
+                      </span>
                     </div>
                   </div>
                 </a>
@@ -310,6 +331,8 @@ export default function MarketplacePage() {
           )}
         </div>
       )}
+
+      <CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} />
     </main>
   );
 }

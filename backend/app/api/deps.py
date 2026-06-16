@@ -1,10 +1,13 @@
+from typing import Optional
+
 from bson import ObjectId
 from bson.errors import InvalidId
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, Header, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 
 from app.core.security import decode_access_token
 from app.db.mongo import get_db_client
+from app.services.firebase_auth import FirebaseAuthError, verify_firebase_token
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 
@@ -39,6 +42,35 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> dict:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="User not found or inactive",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return user
+
+
+async def get_optional_firebase_user(
+    authorization: Optional[str] = Header(default=None),
+) -> Optional[dict]:
+    """Return the verified Firebase claims if a valid Bearer token is present, else None."""
+    if not authorization or not authorization.lower().startswith("bearer "):
+        return None
+    token = authorization.split(" ", 1)[1].strip()
+    try:
+        return await verify_firebase_token(token)
+    except FirebaseAuthError:
+        return None
+    except Exception:
+        # Network/JWKS issues shouldn't break guest checkout — treat as anonymous.
+        return None
+
+
+async def get_firebase_user(
+    user: Optional[dict] = Depends(get_optional_firebase_user),
+) -> dict:
+    """Require a valid Firebase ID token."""
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required",
             headers={"WWW-Authenticate": "Bearer"},
         )
     return user

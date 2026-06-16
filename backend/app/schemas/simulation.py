@@ -17,6 +17,8 @@ class SimulationRequest(BaseModel):
     longitude: float = Field(..., ge=-180, le=180)
     tilt_degrees: float = Field(default=35, ge=0, le=90)
     aspect_degrees: float = Field(default=0, ge=-180, le=180)
+    cost_per_kwp_eur: float = Field(default=900, ge=0, description="Custo do sistema por kWp instalado")
+    battery_cost_eur: float = Field(default=2000, ge=0, description="Custo da bateria (0 se sem bateria)")
 
 
 class SimulationResponse(BaseModel):

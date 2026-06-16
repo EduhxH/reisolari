@@ -18,6 +18,8 @@ const SimulationPanel: React.FC<Props> = ({ areaM2, centroid, onSimulationResult
   const [aspect, setAspect] = useState(0);
   const [region, setRegion] = useState<"continent" | "madeira" | "azores">("continent");
   const [hasSocial, setHasSocial] = useState(false);
+  const [costPerKwp, setCostPerKwp] = useState(900);
+  const [batteryCost, setBatteryCost] = useState(2000);
   const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL?.replace(/\/$/, "") ?? "";
 
   const runSimulation = async () => {
@@ -37,7 +39,9 @@ const SimulationPanel: React.FC<Props> = ({ areaM2, centroid, onSimulationResult
         latitude: centroid.lat,
         longitude: centroid.lon,
         tilt_degrees: tilt,
-        aspect_degrees: aspect
+        aspect_degrees: aspect,
+        cost_per_kwp_eur: costPerKwp,
+        battery_cost_eur: batteryCost
       };
       const endpoint = `${backendUrl || ""}/api/v1/simulation/`;
       const res = await axios.post(endpoint, payload);
@@ -102,6 +106,31 @@ const SimulationPanel: React.FC<Props> = ({ areaM2, centroid, onSimulationResult
             max={180}
             value={aspect}
             onChange={event => setAspect(parseFloat(event.target.value) || 0)}
+            className="bg-slate-950 border border-slate-700 rounded-md px-2 py-1"
+          />
+        </label>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <label className="flex flex-col text-sm gap-1">
+          Custo sistema (EUR/kWp)
+          <input
+            type="number"
+            min={0}
+            step={10}
+            value={costPerKwp}
+            onChange={event => setCostPerKwp(parseFloat(event.target.value) || 0)}
+            className="bg-slate-950 border border-slate-700 rounded-md px-2 py-1"
+          />
+        </label>
+        <label className="flex flex-col text-sm gap-1">
+          Custo bateria (EUR)
+          <input
+            type="number"
+            min={0}
+            step={100}
+            value={batteryCost}
+            onChange={event => setBatteryCost(parseFloat(event.target.value) || 0)}
             className="bg-slate-950 border border-slate-700 rounded-md px-2 py-1"
           />
         </label>

@@ -14,6 +14,8 @@ class Settings(BaseSettings):
     GROQ_API_KEY: str = ""
     FRONTEND_PUBLIC_URL: str = "http://localhost:3000"
     BACKEND_PUBLIC_URL: str = "http://localhost:8000"
+    FIREBASE_PROJECT_ID: str = "reisolari-92630"
+    MAPBOX_TOKEN: str = ""
 
     class Config:
         env_file = ".env"
