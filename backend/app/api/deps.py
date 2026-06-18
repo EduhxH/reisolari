@@ -5,6 +5,7 @@ from bson.errors import InvalidId
 from fastapi import Depends, Header, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 
+from app.core.config import settings
 from app.core.security import decode_access_token
 from app.db.mongo import get_db_client
 from app.services.firebase_auth import FirebaseAuthError, verify_firebase_token
@@ -72,5 +73,15 @@ async def get_firebase_user(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Authentication required",
             headers={"WWW-Authenticate": "Bearer"},
+        )
+    return user
+
+
+async def get_admin_user(user: dict = Depends(get_firebase_user)) -> dict:
+    """Require an authenticated user whose uid is in the ADMIN_UIDS allowlist."""
+    if user["sub"] not in settings.admin_uid_set:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Acesso restrito a moderadores.",
         )
     return user

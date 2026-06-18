@@ -43,3 +43,9 @@ async def init_indexes() -> None:
     await db.favorites.create_index([("user_uid", ASCENDING), ("created_at", DESCENDING)])
     await db.notifications.create_index([("user_uid", ASCENDING), ("created_at", DESCENDING)])
     await db.notifications.create_index([("user_uid", ASCENDING), ("read", ASCENDING)])
+    await db.ratings.create_index([("rater_uid", ASCENDING), ("rated_uid", ASCENDING)], unique=True)
+    await db.ratings.create_index([("rated_uid", ASCENDING), ("created_at", DESCENDING)])
+    await db.reports.create_index(
+        [("reporter_uid", ASCENDING), ("target_type", ASCENDING), ("target_id", ASCENDING)], unique=True
+    )
+    await db.reports.create_index([("status", ASCENDING), ("created_at", DESCENDING)])

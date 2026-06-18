@@ -19,6 +19,7 @@ class ListingDocument(BaseModel):
     price_cents: int
     currency: str = "eur"
     listing_type: str = "classico"
+    status: str = "active"
     stock: int = 1
     active: bool = True
     location: Optional[dict] = None

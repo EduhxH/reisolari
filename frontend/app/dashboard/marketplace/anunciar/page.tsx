@@ -34,6 +34,7 @@ import {
   type AdForm
 } from "@/lib/adWizard";
 import { lookupPostalCode } from "@/lib/geocoding";
+import { useRequireAuth, AuthChecking } from "@/lib/useRequireAuth";
 
 const DRAFT_KEY = "reisolari_ad_draft";
 const inputClass =
@@ -79,6 +80,7 @@ function buildCascadeLevels(
 
 export default function AnunciarPage() {
   const { user, loading: authLoading } = useAuth();
+  const { ready } = useRequireAuth();
   const form = useForm<AdForm>({ defaultValues: defaultAdForm, mode: "onChange" });
   const { register, watch, setValue, reset, getValues } = form;
 
@@ -449,6 +451,10 @@ export default function AnunciarPage() {
     showErrors && stepErrors[field] ? (
       <p className="text-[11px] text-red-300 mt-1">{stepErrors[field]}</p>
     ) : null;
+
+  if (!ready) {
+    return <AuthChecking />;
+  }
 
   return (
     <main className="min-h-screen bg-bg text-slate-100 p-6">

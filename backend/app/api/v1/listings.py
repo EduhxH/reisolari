@@ -1,3 +1,4 @@
+import re
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -36,6 +37,8 @@ async def list_listings(
     active: Optional[bool] = Query(default=True),
     condition: Optional[str] = Query(default=None),
     category_id: Optional[str] = Query(default=None),
+    search: Optional[str] = Query(default=None, max_length=120),
+    sort: str = Query(default="recent"),
     min_price_cents: Optional[int] = Query(default=None, ge=0),
     max_price_cents: Optional[int] = Query(default=None, ge=0),
     owner_id: Optional[str] = Query(default=None),
@@ -58,14 +61,19 @@ async def list_listings(
             query["price_cents"]["$lte"] = max_price_cents
     if owner_id:
         query["owner_id"] = owner_id
+    if search and search.strip():
+        pattern = {"$regex": re.escape(search.strip()), "$options": "i"}
+        query["$or"] = [{"title": pattern}, {"description": pattern}]
 
-    # Premium exposure: premium tier first (listing_type desc), then newest.
-    cursor = (
-        db.listings.find(query)
-        .sort([("listing_type", -1), ("created_at", -1)])
-        .skip(skip)
-        .limit(limit)
-    )
+    if sort == "price_asc":
+        sort_spec = [("price_cents", 1)]
+    elif sort == "price_desc":
+        sort_spec = [("price_cents", -1)]
+    else:
+        # Premium exposure: premium tier first (listing_type desc), then newest.
+        sort_spec = [("listing_type", -1), ("created_at", -1)]
+
+    cursor = db.listings.find(query).sort(sort_spec).skip(skip).limit(limit)
     return [serialize_listing(doc) async for doc in cursor]
 
 
@@ -144,3 +152,36 @@ async def delete_listing(listing_id: str, user: dict = Depends(get_firebase_user
         {"$set": {"active": False, "updated_at": datetime.now(timezone.utc)}},
     )
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+async def _set_listing_status(
+    listing_id: str, user: dict, *, new_status: str, active: bool
+) -> ListingPublic:
+    db = get_database()
+    oid = require_object_id(listing_id, "listing_id")
+    existing = await db.listings.find_one({"_id": oid})
+    if existing is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Listing not found")
+    if existing.get("owner_id") != user["sub"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Apenas o autor do anúncio pode alterar o estado.",
+        )
+    await db.listings.update_one(
+        {"_id": oid},
+        {"$set": {"status": new_status, "active": active, "updated_at": datetime.now(timezone.utc)}},
+    )
+    updated = await db.listings.find_one({"_id": oid})
+    return serialize_listing(updated)
+
+
+@router.post("/{listing_id}/mark-sold", response_model=ListingPublic)
+async def mark_listing_sold(listing_id: str, user: dict = Depends(get_firebase_user)):
+    """Mark the listing as sold (archived) — owner only."""
+    return await _set_listing_status(listing_id, user, new_status="sold", active=False)
+
+
+@router.post("/{listing_id}/reactivate", response_model=ListingPublic)
+async def reactivate_listing(listing_id: str, user: dict = Depends(get_firebase_user)):
+    """Re-list a previously sold/archived listing — owner only."""
+    return await _set_listing_status(listing_id, user, new_status="active", active=True)

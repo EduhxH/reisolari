@@ -78,6 +78,8 @@ export default function NotificationsBell() {
               {notifications.map(n => {
                 const href = n.data?.room_id
                   ? `/mensagens?room=${n.data.room_id}`
+                  : n.data?.profile_uid
+                  ? `/perfil/${n.data.profile_uid}`
                   : "/marketplace";
                 return (
                   <li key={n.id}>

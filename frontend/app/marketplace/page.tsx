@@ -13,6 +13,8 @@ import AnunciarButton from "@/components/AnunciarButton";
 import NotificationsBell from "@/components/NotificationsBell";
 import { createRoom, sendMessage } from "@/lib/chat";
 import { addFavorite, getFavoriteIds, removeFavorite } from "@/lib/favorites";
+import { fetchCategoryTree, type CategoryNode } from "@/lib/api";
+import { getProfilesSummary, type ProfileSummary } from "@/lib/profile";
 
 type Listing = {
   id: string;
@@ -60,12 +62,21 @@ type Tab = "store" | "internal" | "olx";
 
 export default function MarketplacePage() {
   const { count, isHydrated } = useCart();
+  const { user } = useAuth();
+  const router = useRouter();
   const [cartOpen, setCartOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>("store");
+  const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
+  const [actionBusy, setActionBusy] = useState<string | null>(null);
 
   // Internal listings state
   const [listings, setListings] = useState<Listing[]>([]);
   const [condition, setCondition] = useState("");
+  const [search, setSearch] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("");
+  const [sort, setSort] = useState("recent");
+  const [tree, setTree] = useState<CategoryNode[]>([]);
+  const [sellerSummaries, setSellerSummaries] = useState<Record<string, ProfileSummary>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -80,11 +91,6 @@ export default function MarketplacePage() {
 
   const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL?.replace(/\/$/, "") ?? "";
 
-  const { user } = useAuth();
-  const router = useRouter();
-  const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
-  const [actionBusy, setActionBusy] = useState<string | null>(null);
-
   // Retrieve coordinates on mount
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -96,24 +102,35 @@ export default function MarketplacePage() {
     }
   }, []);
 
-  // Fetch Internal listings
+  // Taxonomy for the category filter.
   useEffect(() => {
-    const loadListings = async () => {
+    fetchCategoryTree().then(setTree).catch(() => setTree([]));
+  }, []);
+
+  // Fetch internal listings (debounced) whenever search/filters/sort change.
+  useEffect(() => {
+    const handle = setTimeout(() => {
+      const params: Record<string, any> = { sort };
+      if (condition) params.condition = condition;
+      if (categoryFilter) params.category_id = categoryFilter;
+      if (search.trim()) params.search = search.trim();
       setLoading(true);
       setError(null);
-      try {
-        const params = condition ? { condition } : {};
-        const response = await axios.get(`${backendUrl || ""}/api/v1/listings/`, { params });
-        setListings(response.data);
-      } catch {
-        setError("Não foi possível carregar os anúncios do mercado interno.");
-      } finally {
-        setLoading(false);
-      }
-    };
+      axios
+        .get(`${backendUrl || ""}/api/v1/listings/`, { params })
+        .then(response => setListings(response.data))
+        .catch(() => setError("Não foi possível carregar os anúncios do mercado interno."))
+        .finally(() => setLoading(false));
+    }, 350);
+    return () => clearTimeout(handle);
+  }, [backendUrl, condition, categoryFilter, sort, search]);
 
-    loadListings();
-  }, [backendUrl, condition]);
+  // Seller reputation for the visible listings (batched).
+  useEffect(() => {
+    const owners = Array.from(new Set(listings.map(item => item.owner_id))).filter(Boolean);
+    if (owners.length === 0) return;
+    getProfilesSummary(owners).then(setSellerSummaries).catch(() => undefined);
+  }, [listings]);
 
   // Load which listings this user has favorited (for the heart state).
   useEffect(() => {
@@ -222,8 +239,16 @@ export default function MarketplacePage() {
           </div>
 
           <div className="flex items-center gap-2">
-            {user ? <NotificationsBell /> : null}
             <AnunciarButton />
+            {user ? <NotificationsBell /> : null}
+            {user ? (
+              <Link
+                href="/conta"
+                className="px-3 py-2 rounded-lg text-xs font-semibold text-slate-300 bg-slate-900 border border-slate-800 hover:border-emerald-700 hover:text-emerald-300 transition-colors"
+              >
+                A minha conta
+              </Link>
+            ) : null}
             <AuthHeaderButtons />
             <Link
               href="/"
@@ -268,22 +293,52 @@ export default function MarketplacePage() {
         <StoreCatalog />
       ) : activeTab === "internal" ? (
         <div className="space-y-4">
-          <div className="flex justify-between items-center">
+          <div className="space-y-3">
             <h2 className="text-lg font-semibold text-slate-200">Painéis de Vendedores Reisolari</h2>
-            <label className="flex items-center text-sm gap-2 bg-slate-900 border border-slate-800 rounded-md px-3 py-1.5">
-              <span className="text-slate-400 text-xs">Estado:</span>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <input
+                value={search}
+                onChange={event => setSearch(event.target.value)}
+                placeholder="Pesquisar anúncios…"
+                className="flex-1 rounded-lg bg-slate-900 border border-slate-800 px-3 py-2 text-sm text-slate-100 outline-none focus:border-emerald-600"
+              />
+              <select
+                value={categoryFilter}
+                onChange={event => setCategoryFilter(event.target.value)}
+                className="rounded-lg bg-slate-900 border border-slate-800 px-3 py-2 text-xs text-slate-200 outline-none focus:border-emerald-600 cursor-pointer"
+              >
+                <option value="">Todas as categorias</option>
+                {tree.map(root => (
+                  <optgroup key={root.id} label={root.name}>
+                    {root.children.map(child => (
+                      <option key={child.id} value={child.id}>
+                        {child.name}
+                      </option>
+                    ))}
+                  </optgroup>
+                ))}
+              </select>
               <select
                 value={condition}
                 onChange={event => setCondition(event.target.value)}
-                className="bg-transparent text-slate-200 outline-none text-xs font-medium cursor-pointer"
+                className="rounded-lg bg-slate-900 border border-slate-800 px-3 py-2 text-xs text-slate-200 outline-none focus:border-emerald-600 cursor-pointer"
               >
-                <option value="" className="bg-slate-950">Todos</option>
-                <option value="novo" className="bg-slate-950">Novo</option>
-                <option value="usado_como_novo" className="bg-slate-950">Como novo</option>
-                <option value="usado_sinais" className="bg-slate-950">Usado</option>
-                <option value="pecas" className="bg-slate-950">Para peças</option>
+                <option value="">Qualquer estado</option>
+                <option value="novo">Novo</option>
+                <option value="usado_como_novo">Como novo</option>
+                <option value="usado_sinais">Com sinais de uso</option>
+                <option value="pecas">Para peças</option>
               </select>
-            </label>
+              <select
+                value={sort}
+                onChange={event => setSort(event.target.value)}
+                className="rounded-lg bg-slate-900 border border-slate-800 px-3 py-2 text-xs text-slate-200 outline-none focus:border-emerald-600 cursor-pointer"
+              >
+                <option value="recent">Mais recentes</option>
+                <option value="price_asc">Preço ↑</option>
+                <option value="price_desc">Preço ↓</option>
+              </select>
+            </div>
           </div>
 
           {loading ? <div className="text-sm text-slate-400">A carregar anúncios...</div> : null}
@@ -322,7 +377,9 @@ export default function MarketplacePage() {
                   </div>
                   <div className="p-4 space-y-2">
                     <div className="flex items-start justify-between gap-3">
-                      <h3 className="font-semibold text-slate-100 leading-snug line-clamp-1">{listing.title}</h3>
+                      <Link href={`/anuncio/${listing.id}`} className="font-semibold text-slate-100 leading-snug line-clamp-1 hover:text-emerald-300">
+                        {listing.title}
+                      </Link>
                       <span className="text-sm text-emerald-400 font-bold whitespace-nowrap">
                         {formatPrice(listing.price_cents, listing.currency)}
                       </span>
@@ -336,6 +393,18 @@ export default function MarketplacePage() {
                         {listing.city ? ` · ${listing.city}` : ""}
                       </span>
                     </div>
+                    {sellerSummaries[listing.owner_id] ? (
+                      <Link
+                        href={`/perfil/${listing.owner_id}`}
+                        className="inline-flex items-center gap-1 text-[10px] text-slate-400 hover:text-emerald-300"
+                      >
+                        <span className="text-amber-400">★</span>
+                        {sellerSummaries[listing.owner_id].rating.count > 0
+                          ? `${sellerSummaries[listing.owner_id].rating.average.toFixed(1)} (${sellerSummaries[listing.owner_id].rating.count})`
+                          : "Novo vendedor"}
+                        <span className="text-slate-500">· {sellerSummaries[listing.owner_id].display_name}</span>
+                      </Link>
+                    ) : null}
                     <p className="text-xs text-slate-300 line-clamp-2">{listing.description}</p>
                     {user && listing.owner_id === user.uid ? (
                       <p className="text-[10px] text-slate-500 pt-1">O seu anúncio</p>

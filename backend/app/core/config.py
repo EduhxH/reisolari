@@ -16,6 +16,12 @@ class Settings(BaseSettings):
     BACKEND_PUBLIC_URL: str = "http://localhost:8000"
     FIREBASE_PROJECT_ID: str = "reisolari-92630"
     MAPBOX_TOKEN: str = ""
+    # Comma-separated Firebase uids allowed into the moderation area.
+    ADMIN_UIDS: str = ""
+
+    @property
+    def admin_uid_set(self) -> set[str]:
+        return {uid.strip() for uid in self.ADMIN_UIDS.split(",") if uid.strip()}
 
     class Config:
         env_file = ".env"

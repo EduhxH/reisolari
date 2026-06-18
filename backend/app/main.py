@@ -7,7 +7,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.api.v1 import (
     auth, listings, simulation, payments, chat, products, orders, categories,
-    seller, media, favorites, notifications,
+    seller, media, favorites, notifications, profiles, reports,
 )
 from app.websocket.stream_ws import router as stream_ws_router
 from app.core.logging_config import setup_logging
@@ -63,6 +63,8 @@ app.include_router(media.router, prefix="/api/v1/media", tags=["media"])
 app.include_router(chat.router, prefix="/api/v1/chat", tags=["chat"])
 app.include_router(favorites.router, prefix="/api/v1/favorites", tags=["favorites"])
 app.include_router(notifications.router, prefix="/api/v1/notifications", tags=["notifications"])
+app.include_router(profiles.router, prefix="/api/v1/profiles", tags=["profiles"])
+app.include_router(reports.router, prefix="/api/v1/reports", tags=["reports"])
 app.include_router(stream_ws_router, prefix="/ws", tags=["websocket"])
 
 # Serve uploaded listing images (dev-grade local storage; see app/api/v1/media.py).

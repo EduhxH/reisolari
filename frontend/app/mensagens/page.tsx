@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth";
 import { useRealtime } from "@/lib/realtime";
+import { useRequireAuth, AuthChecking } from "@/lib/useRequireAuth";
 import { formatPrice } from "@/lib/api";
 import {
   getMessages,
@@ -19,6 +20,7 @@ function timeOf(iso: string): string {
 
 export default function MensagensPage() {
   const { user, loading } = useAuth();
+  const { ready } = useRequireAuth();
   const { subscribeMessages } = useRealtime();
   const [rooms, setRooms] = useState<ChatRoom[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -99,17 +101,8 @@ export default function MensagensPage() {
     }
   };
 
-  if (!loading && !user) {
-    return (
-      <main className="min-h-screen bg-bg text-slate-100 grid place-items-center p-6">
-        <div className="text-center space-y-3">
-          <p className="text-slate-300">Inicie sessão para ver as suas mensagens.</p>
-          <Link href="/login" className="text-emerald-400 font-semibold hover:text-emerald-300">
-            Iniciar sessão
-          </Link>
-        </div>
-      </main>
-    );
+  if (!ready) {
+    return <AuthChecking />;
   }
 
   return (
@@ -185,11 +178,16 @@ export default function MensagensPage() {
                       {activeRoom.listing?.title ?? "Anúncio"}
                     </p>
                     <p className="text-[11px] text-slate-400">
-                      {activeRoom.role === "buyer" ? "Conversa com o vendedor" : "Conversa com o comprador"}
+                      <Link href={`/perfil/${activeRoom.counterparty_uid}`} className="hover:text-emerald-300">
+                        {activeRoom.role === "buyer" ? "Ver perfil do vendedor" : "Ver perfil do comprador"}
+                      </Link>
                       {activeRoom.listing ? ` · ${formatPrice(activeRoom.listing.price_cents)}` : ""}
                     </p>
                   </div>
-                  <Link href="/marketplace" className="text-[11px] text-emerald-300 hover:text-emerald-200 whitespace-nowrap">
+                  <Link
+                    href={activeRoom.listing ? `/anuncio/${activeRoom.listing_id}` : "/marketplace"}
+                    className="text-[11px] text-emerald-300 hover:text-emerald-200 whitespace-nowrap"
+                  >
                     Ver anúncio
                   </Link>
                 </div>
