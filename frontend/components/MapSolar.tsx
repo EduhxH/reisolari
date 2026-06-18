@@ -104,11 +104,18 @@ const DRAW_STYLES = [
 
 type Props = {
   onPolygonChange: (areaM2: number, centroid: { lat: number; lon: number }) => void;
+  flyTo?: { lon: number; lat: number } | null;
 };
 
-const MapSolar: React.FC<Props> = ({ onPolygonChange }) => {
+const MapSolar: React.FC<Props> = ({ onPolygonChange, flyTo }) => {
   const mapRef = useRef<MapRef | null>(null);
   const drawRef = useRef<MapboxDraw | null>(null);
+
+  // Jump to a location chosen in the search bar, at roof-level zoom.
+  useEffect(() => {
+    if (!flyTo || !mapRef.current) return;
+    mapRef.current.getMap().flyTo({ center: [flyTo.lon, flyTo.lat], zoom: 19, duration: 1500 });
+  }, [flyTo]);
 
   const setupDraw = useCallback(() => {
     if (!mapRef.current || drawRef.current) return;

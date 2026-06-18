@@ -12,6 +12,8 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24
     OPENAI_API_KEY: str = ""
     GROQ_API_KEY: str = ""
+    # SerpAPI (Google Shopping/Web) — fonte externa de painéis para o menu "Ideais".
+    SERPAPI_API_KEY: str = ""
     FRONTEND_PUBLIC_URL: str = "http://localhost:3000"
     BACKEND_PUBLIC_URL: str = "http://localhost:8000"
     FIREBASE_PROJECT_ID: str = "reisolari-92630"
@@ -24,7 +26,10 @@ class Settings(BaseSettings):
         return {uid.strip() for uid in self.ADMIN_UIDS.split(",") if uid.strip()}
 
     class Config:
-        env_file = ".env"
+        # Lê tanto ".env" (convenção) como "env" (ficheiro de segredos local do
+        # projeto). O último tem precedência, garantindo que os segredos reais em
+        # backend/env são efetivamente carregados.
+        env_file = (".env", "env")
         extra = "ignore"
 
 

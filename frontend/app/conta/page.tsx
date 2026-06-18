@@ -17,8 +17,9 @@ import { getMyProfile, updateProfile, type MyProfile } from "@/lib/profile";
 import { compressToWebp, uploadImage } from "@/lib/imageUpload";
 import { useRequireAuth, AuthChecking } from "@/lib/useRequireAuth";
 import { checkAdmin } from "@/lib/reports";
+import { downloadOrcamento, getQuestionnaireStatus } from "@/lib/questionnaire";
 
-type Tab = "listings" | "chats" | "favorites" | "perfil";
+type Tab = "listings" | "chats" | "favorites" | "perfil" | "simulador";
 
 const EMPTY_PROFILE: MyProfile = {
   uid: "",
@@ -67,13 +68,43 @@ export default function ContaPage() {
   const [profileSaved, setProfileSaved] = useState(false);
   const [uploading, setUploading] = useState<"banner" | "avatar" | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [hasSimulation, setHasSimulation] = useState(false);
+  const [downloadingQuote, setDownloadingQuote] = useState(false);
 
   useEffect(() => {
     const requested = new URLSearchParams(window.location.search).get("tab");
-    if (requested === "perfil" || requested === "chats" || requested === "favorites") {
+    if (["perfil", "chats", "favorites", "simulador"].includes(requested ?? "")) {
       setTab(requested as Tab);
     }
   }, []);
+
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    user
+      .getIdToken()
+      .then(token => getQuestionnaireStatus(token))
+      .then(done => {
+        if (!cancelled) setHasSimulation(done);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
+
+  const downloadQuote = async () => {
+    if (!user) return;
+    setDownloadingQuote(true);
+    try {
+      const token = await user.getIdToken();
+      await downloadOrcamento(token);
+    } catch {
+      // ignore
+    } finally {
+      setDownloadingQuote(false);
+    }
+  };
 
   useEffect(() => {
     if (!user) {
@@ -206,7 +237,8 @@ export default function ContaPage() {
     { id: "listings", label: "Meus anúncios" },
     { id: "chats", label: "Conversas" },
     { id: "favorites", label: "Favoritos" },
-    { id: "perfil", label: "Perfil" }
+    { id: "perfil", label: "Perfil" },
+    { id: "simulador", label: "Simulador" }
   ];
 
   return (
@@ -503,6 +535,45 @@ export default function ContaPage() {
                   Ver perfil público →
                 </Link>
               ) : null}
+            </div>
+          </div>
+        ) : null}
+
+        {/* Simulador / Definições */}
+        {tab === "simulador" ? (
+          <div className="space-y-4 max-w-2xl">
+            <div className="rounded-xl border border-slate-800 bg-card p-5 space-y-3">
+              <h2 className="text-lg font-semibold text-white">Simulador solar</h2>
+              <p className="text-sm text-slate-400">
+                {hasSimulation
+                  ? "Pode rever as suas propostas, descarregar o orçamento ou refazer o questionário a qualquer momento."
+                  : "Ainda não fez o questionário. Faça-o para receber as suas propostas ideais."}
+              </p>
+              <div className="flex flex-wrap items-center gap-3 pt-1">
+                <Link
+                  href="/questionario"
+                  className="px-4 py-2 rounded-lg text-sm font-semibold text-slate-950 bg-emerald-500 hover:bg-emerald-400"
+                >
+                  {hasSimulation ? "Refazer questionário" : "Fazer questionário"}
+                </Link>
+                {hasSimulation ? (
+                  <>
+                    <Link
+                      href="/ideais"
+                      className="px-4 py-2 rounded-lg text-sm font-semibold text-slate-200 bg-slate-800 border border-slate-700 hover:border-emerald-700"
+                    >
+                      Ver propostas ideais
+                    </Link>
+                    <button
+                      onClick={downloadQuote}
+                      disabled={downloadingQuote}
+                      className="px-4 py-2 rounded-lg text-sm font-semibold text-slate-200 bg-slate-800 border border-slate-700 hover:border-emerald-700 disabled:opacity-50"
+                    >
+                      {downloadingQuote ? "A gerar…" : "Descarregar orçamento (PDF)"}
+                    </button>
+                  </>
+                ) : null}
+              </div>
             </div>
           </div>
         ) : null}

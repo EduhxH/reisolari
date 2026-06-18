@@ -13,6 +13,7 @@ import { useAuth } from "@/lib/auth";
 import { getRedirectTarget, translateAuthError } from "@/lib/authErrors";
 import { ANUNCIAR_ROUTE, consumeSellerIntent, hasSellerIntent } from "@/lib/onboarding";
 import { upsertSellerProfile } from "@/lib/seller";
+import { getQuestionnaireStatus } from "@/lib/questionnaire";
 import AuthExtraMethods from "@/components/AuthExtraMethods";
 
 export default function CreateAccountPage() {
@@ -39,8 +40,15 @@ export default function CreateAccountPage() {
           // non-fatal
         }
         if (!cancelled) router.replace(ANUNCIAR_ROUTE);
-      } else if (!cancelled) {
-        router.replace(getRedirectTarget());
+      } else {
+        // Onboarding obrigatório: o questionário é a ação primária após o registo.
+        try {
+          const token = await user.getIdToken();
+          const done = await getQuestionnaireStatus(token);
+          if (!cancelled) router.replace(done ? getRedirectTarget() : "/questionario");
+        } catch {
+          if (!cancelled) router.replace("/questionario");
+        }
       }
     })();
     return () => {

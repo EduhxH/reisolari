@@ -9,6 +9,7 @@ import { useAuth } from "@/lib/auth";
 import { getRedirectTarget, translateAuthError } from "@/lib/authErrors";
 import { ANUNCIAR_ROUTE, consumeSellerIntent, hasSellerIntent } from "@/lib/onboarding";
 import { upsertSellerProfile } from "@/lib/seller";
+import { getQuestionnaireStatus } from "@/lib/questionnaire";
 import AuthExtraMethods from "@/components/AuthExtraMethods";
 
 export default function LoginPage() {
@@ -33,8 +34,15 @@ export default function LoginPage() {
           // non-fatal: profile mark can be retried from the wizard
         }
         if (!cancelled) router.replace(ANUNCIAR_ROUTE);
-      } else if (!cancelled) {
-        router.replace(getRedirectTarget());
+      } else {
+        // Onboarding obrigatório: encaminha para o questionário se ainda não o fez.
+        try {
+          const token = await user.getIdToken();
+          const done = await getQuestionnaireStatus(token);
+          if (!cancelled) router.replace(done ? getRedirectTarget() : "/questionario");
+        } catch {
+          if (!cancelled) router.replace(getRedirectTarget());
+        }
       }
     })();
     return () => {

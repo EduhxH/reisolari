@@ -3,6 +3,11 @@
 !.env.example
 !.env.local.example
 
+# Local secret files without a dot prefix (NOT caught by the .env rules above).
+# These hold real credentials and must never be committed.
+backend/env
+frontend/env.local
+
 # Python backend
 __pycache__/
 *.py[cod]

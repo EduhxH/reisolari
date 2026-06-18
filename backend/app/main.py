@@ -7,7 +7,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.api.v1 import (
     auth, listings, simulation, payments, chat, products, orders, categories,
-    seller, media, favorites, notifications, profiles, reports,
+    seller, media, favorites, notifications, profiles, reports, questionnaire,
 )
 from app.websocket.stream_ws import router as stream_ws_router
 from app.core.logging_config import setup_logging
@@ -54,6 +54,7 @@ app.add_middleware(
 app.include_router(auth.router, prefix="/api/v1/auth", tags=["auth"])
 app.include_router(listings.router, prefix="/api/v1/listings", tags=["listings"])
 app.include_router(simulation.router, prefix="/api/v1/simulation", tags=["simulation"])
+app.include_router(questionnaire.router, prefix="/api/v1/questionnaire", tags=["questionnaire"])
 app.include_router(payments.router, prefix="/api/v1/payments", tags=["payments"])
 app.include_router(products.router, prefix="/api/v1/products", tags=["products"])
 app.include_router(orders.router, prefix="/api/v1/orders", tags=["orders"])
