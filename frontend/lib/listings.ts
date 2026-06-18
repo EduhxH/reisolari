@@ -18,6 +18,7 @@ export type MyListing = {
   active: boolean;
   image_urls: string[];
   favorites_count: number;
+  views_count: number;
   created_at: string;
 };
 
@@ -33,6 +34,41 @@ export type ListingDetail = MyListing & {
 export async function getListing(id: string): Promise<ListingDetail> {
   const res = await axios.get(`${backendUrl}/api/v1/listings/${id}`);
   return res.data;
+}
+
+/** Stable per-browser id so anonymous views are deduped server-side. */
+export function getViewerId(): string {
+  if (typeof window === "undefined") return "";
+  try {
+    let vid = localStorage.getItem("reisolari_vid");
+    if (!vid) {
+      vid =
+        typeof crypto !== "undefined" && crypto.randomUUID
+          ? crypto.randomUUID()
+          : Math.random().toString(36).slice(2) + Date.now().toString(36);
+      localStorage.setItem("reisolari_vid", vid);
+    }
+    return vid;
+  } catch {
+    return "";
+  }
+}
+
+/**
+ * Count a unique view of a listing (deduped per viewer; owner views ignored).
+ * Returns the updated total. Pass the signed-in user's token when available so
+ * the backend can exclude the owner and dedup by uid.
+ */
+export async function recordListingView(
+  id: string,
+  idToken?: string | null
+): Promise<number> {
+  const res = await axios.post(
+    `${backendUrl}/api/v1/listings/${id}/view`,
+    { vid: getViewerId() },
+    idToken ? auth(idToken) : undefined
+  );
+  return res.data.views_count as number;
 }
 
 /** All listings owned by the authenticated user (active + sold/archived). */

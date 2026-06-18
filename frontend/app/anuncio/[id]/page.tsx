@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
@@ -9,6 +9,7 @@ import {
   getListing,
   markListingSold,
   reactivateListing,
+  recordListingView,
   type ListingDetail
 } from "@/lib/listings";
 import { createRoom, sendMessage } from "@/lib/chat";
@@ -26,7 +27,7 @@ const conditionLabels: Record<string, string> = {
 
 export default function AnuncioPage({ params }: { params: { id: string } }) {
   const { id } = params;
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const router = useRouter();
 
   const [listing, setListing] = useState<ListingDetail | null>(null);
@@ -35,9 +36,11 @@ export default function AnuncioPage({ params }: { params: { id: string } }) {
   const [activeImage, setActiveImage] = useState(0);
   const [favorited, setFavorited] = useState(false);
   const [favCount, setFavCount] = useState(0);
+  const [views, setViews] = useState(0);
   const [busy, setBusy] = useState(false);
   const [seller, setSeller] = useState<ProfileSummary | null>(null);
   const [reported, setReported] = useState(false);
+  const viewedIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -46,6 +49,7 @@ export default function AnuncioPage({ params }: { params: { id: string } }) {
         if (cancelled) return;
         setListing(data);
         setFavCount(data.favorites_count);
+        setViews(data.views_count ?? 0);
       })
       .catch(() => {
         if (!cancelled) setNotFound(true);
@@ -54,6 +58,22 @@ export default function AnuncioPage({ params }: { params: { id: string } }) {
       cancelled = true;
     };
   }, [id]);
+
+  // Count a unique view, once per listing and only after auth has settled so the
+  // owner's own views are excluded server-side.
+  useEffect(() => {
+    if (loading || viewedIdRef.current === id) return;
+    viewedIdRef.current = id;
+    let cancelled = false;
+    (async () => {
+      const token = user ? await user.getIdToken().catch(() => null) : null;
+      const count = await recordListingView(id, token).catch(() => null);
+      if (!cancelled && count != null) setViews(count);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [id, user, loading]);
 
   // Ficha técnica labels/units from the category's attribute schema.
   useEffect(() => {
@@ -274,6 +294,10 @@ export default function AnuncioPage({ params }: { params: { id: string } }) {
             <p className="text-[11px] text-slate-400">
               {listing.category_path?.length ? listing.category_path.join(" › ") : ""}
               {listing.city ? ` · ${listing.city}` : ""}
+            </p>
+
+            <p className="text-[11px] text-slate-500">
+              👁 {views} {views === 1 ? "visualização" : "visualizações"}
             </p>
 
             <div className="flex items-center gap-2 pt-1">

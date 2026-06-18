@@ -117,6 +117,7 @@ class ListingPublic(ListingBase):
     id: str
     owner_id: str
     favorites_count: int = 0
+    views_count: int = 0
     created_at: datetime
     updated_at: datetime
 
@@ -145,6 +146,7 @@ def serialize_listing(doc: dict) -> ListingPublic:
         roof_polygon=doc.get("roof_polygon"),
         image_urls=doc.get("image_urls", []),
         favorites_count=doc.get("favorites_count", 0),
+        views_count=doc.get("views_count", 0),
         created_at=doc["created_at"],
         updated_at=doc["updated_at"],
     )

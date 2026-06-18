@@ -29,6 +29,7 @@ type Listing = {
   city?: string | null;
   image_urls: string[];
   favorites_count: number;
+  views_count: number;
   created_at: string;
 };
 
@@ -392,6 +393,9 @@ export default function MarketplacePage() {
                         {listing.category_path?.length ? listing.category_path.join(" › ") : ""}
                         {listing.city ? ` · ${listing.city}` : ""}
                       </span>
+                      {listing.views_count > 0 ? (
+                        <span className="whitespace-nowrap text-slate-500">· 👁 {listing.views_count}</span>
+                      ) : null}
                     </div>
                     {sellerSummaries[listing.owner_id] ? (
                       <Link

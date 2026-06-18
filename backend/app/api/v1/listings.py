@@ -3,8 +3,14 @@ from datetime import datetime, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from pydantic import BaseModel, Field
 
-from app.api.deps import get_database, get_firebase_user, require_object_id
+from app.api.deps import (
+    get_database,
+    get_firebase_user,
+    get_optional_firebase_user,
+    require_object_id,
+)
 from app.core.sanitize import strip_html
 from app.schemas.listing import ListingCreate, ListingPublic, ListingUpdate, serialize_listing
 
@@ -185,3 +191,47 @@ async def mark_listing_sold(listing_id: str, user: dict = Depends(get_firebase_u
 async def reactivate_listing(listing_id: str, user: dict = Depends(get_firebase_user)):
     """Re-list a previously sold/archived listing — owner only."""
     return await _set_listing_status(listing_id, user, new_status="active", active=True)
+
+
+class ViewPayload(BaseModel):
+    # Stable per-browser id (localStorage) used to dedup anonymous views.
+    vid: Optional[str] = Field(default=None, max_length=64)
+
+
+@router.post("/{listing_id}/view")
+async def register_view(
+    listing_id: str,
+    payload: Optional[ViewPayload] = None,
+    user: Optional[dict] = Depends(get_optional_firebase_user),
+):
+    """Register a unique listing view.
+
+    Deduped per viewer (Firebase uid when signed-in, else the client's anonymous
+    id), so refreshes don't inflate the count. The owner's own views never count.
+    """
+    db = get_database()
+    oid = require_object_id(listing_id, "listing_id")
+    listing = await db.listings.find_one({"_id": oid}, {"owner_id": 1, "views_count": 1})
+    if listing is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Listing not found")
+
+    me = user["sub"] if user else None
+    if me and me == listing.get("owner_id"):
+        return {"views_count": listing.get("views_count", 0)}
+
+    vid = payload.vid if payload else None
+    viewer_key = f"uid:{me}" if me else (f"anon:{vid}" if vid else None)
+    if viewer_key is None:
+        # No identity to dedup on (rare; clients always send a vid) — count once.
+        await db.listings.update_one({"_id": oid}, {"$inc": {"views_count": 1}})
+    else:
+        result = await db.listing_views.update_one(
+            {"listing_id": oid, "viewer_key": viewer_key},
+            {"$setOnInsert": {"listing_id": oid, "viewer_key": viewer_key, "created_at": datetime.now(timezone.utc)}},
+            upsert=True,
+        )
+        if result.upserted_id is not None:  # first view from this viewer
+            await db.listings.update_one({"_id": oid}, {"$inc": {"views_count": 1}})
+
+    doc = await db.listings.find_one({"_id": oid}, {"views_count": 1})
+    return {"views_count": (doc or {}).get("views_count", 0)}
