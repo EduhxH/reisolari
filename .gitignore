@@ -49,6 +49,7 @@ Thumbs.db
 Desktop.ini
 .idea/
 .vscode/
+.claude/
 
 # Local data and caches
 .cache/

@@ -12,13 +12,13 @@ const STATUS_META: Record<
 > = {
   paid: {
     label: "Pagamento confirmado",
-    tone: "text-emerald-300 bg-emerald-500/10 border-emerald-500/30",
+    tone: "text-supaste-blue bg-supaste-black/10 border-supaste-green/30",
     icon: "✓",
     note: "Obrigado pela sua compra! Receberá um email com os detalhes da entrega."
   },
   pending: {
     label: "A aguardar confirmação do pagamento",
-    tone: "text-amber-300 bg-amber-500/10 border-amber-500/30",
+    tone: "text-amber-600 bg-amber-500/10 border-amber-500/30",
     icon: "⏳",
     note: "Estamos a confirmar o seu pagamento com a Stripe. Esta página atualiza automaticamente."
   },
@@ -30,7 +30,7 @@ const STATUS_META: Record<
   },
   cancelled: {
     label: "Pedido cancelado",
-    tone: "text-slate-300 bg-slate-500/10 border-slate-500/30",
+    tone: "text-supaste-muted bg-slate-500/10 border-slate-500/30",
     icon: "—",
     note: "Este pedido foi cancelado."
   }
@@ -83,8 +83,8 @@ export default function OrderConfirmationPage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-bg text-slate-100 p-6">
-        <div className="max-w-2xl mx-auto py-24 text-center text-sm text-slate-400">
+      <main className="min-h-screen bg-supaste-mist text-supaste-ink p-6">
+        <div className="max-w-2xl mx-auto py-24 text-center text-sm text-supaste-muted">
           A carregar o seu pedido...
         </div>
       </main>
@@ -93,13 +93,13 @@ export default function OrderConfirmationPage() {
 
   if (error || !order) {
     return (
-      <main className="min-h-screen bg-bg text-slate-100 p-6">
+      <main className="min-h-screen bg-supaste-mist text-supaste-ink p-6">
         <div className="max-w-2xl mx-auto py-24 text-center space-y-4">
           <h1 className="text-xl font-semibold">Pedido não encontrado</h1>
-          <p className="text-sm text-slate-400">{error}</p>
+          <p className="text-sm text-supaste-muted">{error}</p>
           <Link
             href="/marketplace"
-            className="inline-block px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-sm font-semibold"
+            className="inline-block px-4 py-2 rounded-lg bg-supaste-black hover:opacity-90 text-slate-950 text-sm font-semibold"
           >
             Voltar à loja
           </Link>
@@ -111,7 +111,7 @@ export default function OrderConfirmationPage() {
   const meta = STATUS_META[order.status];
 
   return (
-    <main className="min-h-screen bg-bg text-slate-100 p-6">
+    <main className="min-h-screen bg-supaste-mist text-supaste-ink p-6">
       <div className="max-w-2xl mx-auto space-y-6">
         <div
           className={`rounded-xl border p-6 text-center space-y-2 ${meta.tone}`}
@@ -127,36 +127,36 @@ export default function OrderConfirmationPage() {
         {order.status === "pending" ? (
           <button
             onClick={() => load()}
-            className="w-full text-xs font-semibold text-slate-300 hover:text-emerald-300 border border-slate-800 rounded-lg py-2"
+            className="w-full text-xs font-semibold text-supaste-muted hover:text-supaste-blue border border-black/10 rounded-lg py-2"
           >
             Atualizar estado do pagamento
           </button>
         ) : null}
 
-        <section className="rounded-xl border border-slate-800 bg-card p-5 space-y-3">
-          <h2 className="text-sm font-semibold text-slate-200 uppercase tracking-wide">
+        <section className="rounded-xl border border-black/10 bg-white p-5 space-y-3">
+          <h2 className="text-sm font-semibold text-supaste-ink uppercase tracking-wide">
             Itens
           </h2>
           <div className="space-y-2">
             {order.items.map(item => (
               <div
                 key={item.product_id}
-                className="flex justify-between items-center text-sm border-b border-slate-800/60 pb-2 last:border-0"
+                className="flex justify-between items-center text-sm border-b border-black/10/60 pb-2 last:border-0"
               >
                 <div className="min-w-0">
-                  <p className="text-slate-200 line-clamp-1">{item.name}</p>
-                  <p className="text-[11px] text-slate-500">
+                  <p className="text-supaste-ink line-clamp-1">{item.name}</p>
+                  <p className="text-[11px] text-supaste-muted">
                     {item.quantity} × {formatPrice(item.unit_price_net_cents)} (s/ IVA)
                   </p>
                 </div>
-                <span className="font-semibold text-slate-200 whitespace-nowrap">
+                <span className="font-semibold text-supaste-ink whitespace-nowrap">
                   {formatPrice(item.line_net_cents)}
                 </span>
               </div>
             ))}
           </div>
 
-          <div className="border-t border-slate-800 pt-3 space-y-1.5 text-sm">
+          <div className="border-t border-black/10 pt-3 space-y-1.5 text-sm">
             <Row label="Subtotal (s/ IVA)" value={formatPrice(order.subtotal_net_cents)} />
             <Row
               label={`IVA (${(order.vat_rate * 100).toFixed(0)}%)`}
@@ -170,38 +170,38 @@ export default function OrderConfirmationPage() {
                   : formatPrice(order.shipping_cents)
               }
             />
-            <div className="flex justify-between pt-2 border-t border-slate-800 mt-2">
-              <span className="font-semibold text-slate-100">Total pago</span>
-              <span className="font-bold text-emerald-400 text-lg">
+            <div className="flex justify-between pt-2 border-t border-black/10 mt-2">
+              <span className="font-semibold text-supaste-ink">Total pago</span>
+              <span className="font-bold text-supaste-blue text-lg">
                 {formatPrice(order.total_cents)}
               </span>
             </div>
           </div>
         </section>
 
-        <section className="rounded-xl border border-slate-800 bg-card p-5 space-y-1.5">
-          <h2 className="text-sm font-semibold text-slate-200 uppercase tracking-wide mb-2">
+        <section className="rounded-xl border border-black/10 bg-white p-5 space-y-1.5">
+          <h2 className="text-sm font-semibold text-supaste-ink uppercase tracking-wide mb-2">
             Entrega
           </h2>
-          <p className="text-sm text-slate-200">{order.customer.full_name}</p>
-          <p className="text-xs text-slate-400">{order.customer.address_line}</p>
-          <p className="text-xs text-slate-400">
+          <p className="text-sm text-supaste-ink">{order.customer.full_name}</p>
+          <p className="text-xs text-supaste-muted">{order.customer.address_line}</p>
+          <p className="text-xs text-supaste-muted">
             {order.customer.postal_code} {order.customer.city}
           </p>
-          <p className="text-xs text-slate-400">{order.customer.email}</p>
-          <p className="text-xs text-slate-400">{order.customer.phone}</p>
+          <p className="text-xs text-supaste-muted">{order.customer.email}</p>
+          <p className="text-xs text-supaste-muted">{order.customer.phone}</p>
         </section>
 
         <div className="flex justify-center gap-3">
           <Link
             href="/marketplace"
-            className="px-4 py-2 rounded-lg bg-slate-900 border border-slate-800 hover:border-emerald-700 text-slate-200 text-sm font-semibold"
+            className="px-4 py-2 rounded-lg bg-supaste-section border border-black/10 hover:border-supaste-blue text-supaste-ink text-sm font-semibold"
           >
             Voltar à loja
           </Link>
           <Link
             href="/"
-            className="px-4 py-2 rounded-lg bg-slate-900 border border-slate-800 hover:border-emerald-700 text-slate-200 text-sm font-semibold"
+            className="px-4 py-2 rounded-lg bg-supaste-section border border-black/10 hover:border-supaste-blue text-supaste-ink text-sm font-semibold"
           >
             Ir para o simulador
           </Link>
@@ -214,8 +214,8 @@ export default function OrderConfirmationPage() {
 function Row({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex justify-between">
-      <span className="text-slate-400">{label}</span>
-      <span className="text-slate-200">{value}</span>
+      <span className="text-supaste-muted">{label}</span>
+      <span className="text-supaste-ink">{value}</span>
     </div>
   );
 }

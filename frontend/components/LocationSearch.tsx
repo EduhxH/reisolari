@@ -67,16 +67,16 @@ const LocationSearch: React.FC<Props> = ({ onSelect, placeholder }) => {
         onChange={e => setQuery(e.target.value)}
         onFocus={() => suggestions.length && setOpen(true)}
         placeholder={placeholder ?? "Procurar morada ou localidade…"}
-        className="w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2 text-sm text-slate-100 outline-none focus:border-emerald-600"
+        className="supaste-glass-strong w-full rounded-full px-4 py-3 text-sm font-medium text-supaste-black outline-none placeholder:text-supaste-muted/80 focus:border-supaste-blue"
       />
       {open && suggestions.length > 0 ? (
-        <ul className="absolute z-10 mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 shadow-lg overflow-hidden">
+        <ul className="supaste-glass-strong absolute z-10 mt-2 w-full overflow-hidden rounded-[22px] p-1">
           {suggestions.map(s => (
             <li key={s.id}>
               <button
                 type="button"
                 onClick={() => pick(s)}
-                className="block w-full text-left px-3 py-2 text-sm text-slate-200 hover:bg-slate-800"
+                className="block w-full rounded-[18px] px-3 py-2 text-left text-sm font-medium text-supaste-black transition-colors duration-300 hover:bg-[#f5f5f7]"
               >
                 {s.place_name}
               </button>

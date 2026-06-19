@@ -105,9 +105,10 @@ const DRAW_STYLES = [
 type Props = {
   onPolygonChange: (areaM2: number, centroid: { lat: number; lon: number }) => void;
   flyTo?: { lon: number; lat: number } | null;
+  className?: string;
 };
 
-const MapSolar: React.FC<Props> = ({ onPolygonChange, flyTo }) => {
+const MapSolar: React.FC<Props> = ({ onPolygonChange, flyTo, className }) => {
   const mapRef = useRef<MapRef | null>(null);
   const drawRef = useRef<MapboxDraw | null>(null);
 
@@ -152,8 +153,25 @@ const MapSolar: React.FC<Props> = ({ onPolygonChange, flyTo }) => {
     setupDraw();
   }, [setupDraw]);
 
+  if (!MAPBOX_TOKEN) {
+    return (
+      <div
+        className={`mapbox-supaste grid min-h-[500px] w-full place-items-center overflow-hidden rounded-lg border border-black/10 bg-[#eef3ef] ${className ?? ""}`}
+      >
+        <div className="supaste-glass-strong max-w-sm rounded-[28px] p-6 text-center">
+          <p className="text-sm font-semibold text-supaste-black">Mapbox precisa de configuracao</p>
+          <p className="mt-2 text-xs leading-5 text-supaste-muted">
+            Defina NEXT_PUBLIC_MAPBOX_TOKEN para ativar o simulador de telhado em mapa satelite.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="w-full h-[500px] rounded-lg overflow-hidden border border-slate-800" style={{ height: 500 }}>
+    <div
+      className={`mapbox-supaste h-[500px] w-full overflow-hidden rounded-lg border border-black/10 ${className ?? ""}`}
+    >
       <Map
         ref={mapRef}
         onLoad={() => setupDraw()}

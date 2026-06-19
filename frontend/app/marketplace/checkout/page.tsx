@@ -137,15 +137,15 @@ export default function CheckoutPage() {
 
   if (isHydrated && items.length === 0) {
     return (
-      <main className="min-h-screen bg-bg text-slate-100 p-6">
+      <main className="min-h-screen bg-supaste-mist text-supaste-ink p-6">
         <div className="max-w-md mx-auto text-center py-24 space-y-4">
           <h1 className="text-xl font-semibold">O seu carrinho está vazio</h1>
-          <p className="text-sm text-slate-400">
+          <p className="text-sm text-supaste-muted">
             Adicione painéis solares antes de finalizar a compra.
           </p>
           <Link
             href="/marketplace"
-            className="inline-block px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-sm font-semibold"
+            className="inline-block px-4 py-2 rounded-lg bg-supaste-black hover:opacity-90 text-slate-950 text-sm font-semibold"
           >
             Ir para a loja
           </Link>
@@ -155,37 +155,37 @@ export default function CheckoutPage() {
   }
 
   return (
-    <main className="min-h-screen bg-bg text-slate-100 p-6">
+    <main className="min-h-screen bg-supaste-mist text-supaste-ink p-6">
       <div className="max-w-5xl mx-auto space-y-6">
-        <header className="flex items-center justify-between border-b border-slate-800 pb-4">
+        <header className="flex items-center justify-between border-b border-black/10 pb-4">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-white">Checkout</h1>
-            <p className="text-sm text-slate-400">
+            <h1 className="text-2xl font-bold tracking-tight text-supaste-ink">Checkout</h1>
+            <p className="text-sm text-supaste-muted">
               Pagamento seguro processado pela Stripe.
             </p>
           </div>
           <Link
             href="/marketplace"
-            className="text-xs font-semibold text-slate-300 hover:text-emerald-300"
+            className="text-xs font-semibold text-supaste-muted hover:text-supaste-blue"
           >
             ← Continuar a comprar
           </Link>
         </header>
 
         {user && !user.isAnonymous ? (
-          <div className="text-xs text-slate-400 bg-slate-900/60 border border-slate-800 rounded-lg px-4 py-2">
+          <div className="text-xs text-supaste-muted bg-supaste-section/60 border border-black/10 rounded-lg px-4 py-2">
             A comprar como{" "}
-            <span className="text-emerald-300 font-medium">
+            <span className="text-supaste-blue font-medium">
               {user.email || user.displayName}
             </span>{" "}
             — o pedido ficará associado à sua conta.
           </div>
         ) : (
-          <div className="text-xs text-slate-400 bg-slate-900/60 border border-slate-800 rounded-lg px-4 py-2 flex items-center justify-between gap-2">
+          <div className="text-xs text-supaste-muted bg-supaste-section/60 border border-black/10 rounded-lg px-4 py-2 flex items-center justify-between gap-2">
             <span>A finalizar como convidado.</span>
             <Link
               href="/login?redirect=/marketplace/checkout"
-              className="text-emerald-300 hover:text-emerald-200 font-medium whitespace-nowrap"
+              className="text-supaste-blue hover:text-supaste-blue font-medium whitespace-nowrap"
             >
               Iniciar sessão
             </Link>
@@ -197,8 +197,8 @@ export default function CheckoutPage() {
           className="grid lg:grid-cols-[1.3fr,1fr] gap-6 items-start"
         >
           {/* Customer details */}
-          <section className="space-y-4 rounded-xl border border-slate-800 bg-card p-5">
-            <h2 className="text-sm font-semibold text-slate-200 uppercase tracking-wide">
+          <section className="space-y-4 rounded-xl border border-black/10 bg-white p-5">
+            <h2 className="text-sm font-semibold text-supaste-ink uppercase tracking-wide">
               Dados de entrega
             </h2>
 
@@ -301,15 +301,15 @@ export default function CheckoutPage() {
           </section>
 
           {/* Order summary */}
-          <aside className="space-y-4 rounded-xl border border-slate-800 bg-card p-5 lg:sticky lg:top-6">
-            <h2 className="text-sm font-semibold text-slate-200 uppercase tracking-wide">
+          <aside className="space-y-4 rounded-xl border border-black/10 bg-white p-5 lg:sticky lg:top-6">
+            <h2 className="text-sm font-semibold text-supaste-ink uppercase tracking-wide">
               Resumo do pedido
             </h2>
 
             <div className="space-y-3 max-h-64 overflow-y-auto pr-1">
               {items.map(({ product, quantity }) => (
                 <div key={product.id} className="flex gap-3 items-center">
-                  <div className="w-10 shrink-0 bg-slate-950 rounded grid place-items-center p-1">
+                  <div className="w-10 shrink-0 bg-white rounded grid place-items-center p-1">
                     <PanelGraphic
                       widthMm={product.width_mm}
                       heightMm={product.height_mm}
@@ -319,21 +319,21 @@ export default function CheckoutPage() {
                     />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs text-slate-200 line-clamp-1">
+                    <p className="text-xs text-supaste-ink line-clamp-1">
                       {product.name}
                     </p>
-                    <p className="text-[10px] text-slate-500">
+                    <p className="text-[10px] text-supaste-muted">
                       {quantity} × {formatPrice(product.price_cents)} (s/ IVA)
                     </p>
                   </div>
-                  <span className="text-xs font-semibold text-slate-200">
+                  <span className="text-xs font-semibold text-supaste-ink">
                     {formatPrice(product.price_cents * quantity)}
                   </span>
                 </div>
               ))}
             </div>
 
-            <div className="border-t border-slate-800 pt-3 space-y-1.5 text-sm">
+            <div className="border-t border-black/10 pt-3 space-y-1.5 text-sm">
               <Row label="Subtotal (s/ IVA)" value={formatPrice(totals.net)} />
               <Row
                 label={`IVA (${(totals.vatRate * 100).toFixed(0)}%)`}
@@ -345,16 +345,16 @@ export default function CheckoutPage() {
                   totals.shipping === 0 ? "Grátis" : formatPrice(totals.shipping)
                 }
               />
-              <div className="flex justify-between pt-2 border-t border-slate-800 mt-2">
-                <span className="font-semibold text-slate-100">Total</span>
-                <span className="font-bold text-emerald-400 text-lg">
+              <div className="flex justify-between pt-2 border-t border-black/10 mt-2">
+                <span className="font-semibold text-supaste-ink">Total</span>
+                <span className="font-bold text-supaste-blue text-lg">
                   {formatPrice(totals.total)}
                 </span>
               </div>
             </div>
 
             {totals.shipping > 0 ? (
-              <p className="text-[11px] text-slate-500">
+              <p className="text-[11px] text-supaste-muted">
                 Portes grátis em compras acima de{" "}
                 {formatPrice(FREE_SHIPPING_THRESHOLD)} (s/ IVA).
               </p>
@@ -369,11 +369,11 @@ export default function CheckoutPage() {
             <button
               type="submit"
               disabled={submitting || items.length === 0}
-              className="w-full bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 disabled:cursor-not-allowed text-slate-950 font-semibold rounded-lg py-2.5 text-sm transition-colors"
+              className="w-full bg-supaste-black hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed text-slate-950 font-semibold rounded-lg py-2.5 text-sm transition-colors"
             >
               {submitting ? "A redirecionar para o pagamento..." : "Pagar com cartão"}
             </button>
-            <p className="text-[11px] text-slate-500 text-center">
+            <p className="text-[11px] text-supaste-muted text-center">
               Será redirecionado para o checkout seguro da Stripe.
             </p>
           </aside>
@@ -392,7 +392,7 @@ function Field({
 }) {
   return (
     <label className="block space-y-1">
-      <span className="text-xs text-slate-400">{label}</span>
+      <span className="text-xs text-supaste-muted">{label}</span>
       {children}
     </label>
   );
@@ -401,8 +401,8 @@ function Field({
 function Row({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex justify-between">
-      <span className="text-slate-400">{label}</span>
-      <span className="text-slate-200">{value}</span>
+      <span className="text-supaste-muted">{label}</span>
+      <span className="text-supaste-ink">{value}</span>
     </div>
   );
 }

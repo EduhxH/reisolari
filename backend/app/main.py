@@ -12,7 +12,7 @@ from app.api.v1 import (
 from app.websocket.stream_ws import router as stream_ws_router
 from app.core.logging_config import setup_logging
 from app.db.mongo import init_indexes
-from app.services.catalog import seed_catalog
+from app.services.catalog import seed_catalog, seed_product_images
 from app.services.taxonomy import seed_taxonomy
 
 setup_logging()
@@ -30,6 +30,11 @@ async def lifespan(app: FastAPI):
         logger.info("Store catalog seeded (%d products).", count)
     except Exception as exc:
         logger.warning("Store catalog seeding skipped: %s", exc)
+    try:
+        images = await seed_product_images()
+        logger.info("Store product images sourced (%d).", images)
+    except Exception as exc:
+        logger.warning("Store product image sourcing skipped: %s", exc)
     try:
         cat_count = await seed_taxonomy()
         logger.info("Marketplace taxonomy seeded (%d categories).", cat_count)

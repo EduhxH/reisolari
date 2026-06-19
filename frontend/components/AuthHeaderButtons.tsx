@@ -1,15 +1,17 @@
 "use client";
 
-import React, { useState } from "react";
 import Link from "next/link";
-import { useAuth, displayNameFor } from "@/lib/auth";
+import React, { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { ChevronDown, LayoutGrid, LogOut, Settings, UserRound } from "lucide-react";
+import { displayNameFor, useAuth } from "@/lib/auth";
 
 export default function AuthHeaderButtons() {
   const { user, loading, signOut } = useAuth();
   const [open, setOpen] = useState(false);
 
   if (loading) {
-    return <div className="h-8 w-24 rounded-lg bg-slate-900 animate-pulse" />;
+    return <div className="h-10 w-28 animate-pulse rounded-full bg-black/10" />;
   }
 
   if (!user) {
@@ -17,13 +19,13 @@ export default function AuthHeaderButtons() {
       <div className="flex items-center gap-2">
         <Link
           href="/login"
-          className="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-200 bg-slate-900 border border-slate-800 hover:border-emerald-700 hover:text-emerald-300 transition-colors"
+          className="supaste-button rounded-full border border-black/10 bg-white px-4 py-2 text-xs font-semibold text-supaste-black"
         >
           Login
         </Link>
         <Link
           href="/criar-conta"
-          className="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-950 bg-emerald-500 hover:bg-emerald-400 transition-colors"
+          className="supaste-button rounded-full bg-supaste-black px-4 py-2 text-xs font-semibold text-white"
         >
           Criar conta
         </Link>
@@ -38,40 +40,90 @@ export default function AuthHeaderButtons() {
     <div className="relative">
       <button
         onClick={() => setOpen(value => !value)}
-        className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-slate-200 bg-slate-900 border border-slate-800 hover:border-slate-700 transition-colors"
+        className="supaste-button flex items-center gap-2 rounded-full border border-black/10 bg-white px-2 py-1.5 text-xs font-semibold text-supaste-black"
       >
-        <span className="grid place-items-center h-5 w-5 rounded-full bg-emerald-500 text-slate-950 text-[10px] font-bold">
+        <span className="grid h-7 w-7 place-items-center rounded-full bg-supaste-blue text-[11px] font-bold text-white">
           {initial}
         </span>
-        <span className="max-w-[140px] truncate">{label}</span>
-        <span className="text-slate-500">▾</span>
+        <span className="hidden max-w-[130px] truncate sm:inline">{label}</span>
+        <ChevronDown className="h-3.5 w-3.5 text-supaste-muted" />
       </button>
 
-      {open ? (
-        <>
-          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 mt-2 w-56 z-20 rounded-lg border border-slate-800 bg-slate-950 shadow-xl p-1.5">
-            <div className="px-3 py-2 border-b border-slate-800">
-              <p className="text-xs text-slate-200 truncate">{label}</p>
-              {user.email ? (
-                <p className="text-[10px] text-slate-500 truncate">{user.email}</p>
-              ) : null}
-              {user.isAnonymous ? (
-                <p className="text-[10px] text-amber-400/80">Sessão anónima</p>
-              ) : null}
-            </div>
-            <button
-              onClick={async () => {
-                setOpen(false);
-                await signOut();
-              }}
-              className="w-full text-left px-3 py-2 text-xs text-slate-300 hover:bg-slate-900 rounded-md transition-colors"
+      <AnimatePresence>
+        {open ? (
+          <>
+            <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
+            <motion.div
+              initial={{ opacity: 0, y: -8, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -8, scale: 0.97 }}
+              transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+              className="supaste-glass-strong absolute right-0 z-20 mt-2 w-64 rounded-[24px] p-2"
             >
-              Terminar sessão
-            </button>
-          </div>
-        </>
-      ) : null}
+              <div className="flex items-center gap-3 border-b border-black/10 px-3 py-2.5">
+                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-supaste-blue text-sm font-bold text-white">
+                  {initial}
+                </span>
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold text-supaste-black">{label}</p>
+                  {user.email ? <p className="truncate text-[11px] text-supaste-muted">{user.email}</p> : null}
+                  {user.isAnonymous ? (
+                    <p className="text-[11px] font-semibold text-supaste-blue">Sessão de convidado</p>
+                  ) : null}
+                </div>
+              </div>
+
+              <nav className="py-1">
+                <MenuLink href={`/perfil/${user.uid}`} icon={<UserRound className="h-4 w-4" />} onClick={() => setOpen(false)}>
+                  Perfil público
+                </MenuLink>
+                <MenuLink href="/ideais" icon={<LayoutGrid className="h-4 w-4" />} onClick={() => setOpen(false)}>
+                  Propostas ideais
+                </MenuLink>
+                <MenuLink href="/conta" icon={<Settings className="h-4 w-4" />} onClick={() => setOpen(false)}>
+                  Definições
+                </MenuLink>
+              </nav>
+
+              <div className="border-t border-black/10 pt-1">
+                <button
+                  onClick={async () => {
+                    setOpen(false);
+                    await signOut();
+                  }}
+                  className="flex w-full items-center gap-2.5 rounded-[18px] px-3 py-2.5 text-left text-sm font-semibold text-supaste-muted transition-colors hover:bg-supaste-section hover:text-red-600"
+                >
+                  <LogOut className="h-4 w-4" />
+                  Terminar sessão
+                </button>
+              </div>
+            </motion.div>
+          </>
+        ) : null}
+      </AnimatePresence>
     </div>
+  );
+}
+
+function MenuLink({
+  href,
+  icon,
+  children,
+  onClick
+}: {
+  href: string;
+  icon: React.ReactNode;
+  children: React.ReactNode;
+  onClick: () => void;
+}) {
+  return (
+    <Link
+      href={href}
+      onClick={onClick}
+      className="flex items-center gap-2.5 rounded-[18px] px-3 py-2.5 text-sm font-semibold text-supaste-ink transition-colors hover:bg-supaste-section"
+    >
+      <span className="text-supaste-muted">{icon}</span>
+      {children}
+    </Link>
   );
 }

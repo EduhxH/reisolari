@@ -26,6 +26,8 @@ class ProductPublic(BaseModel):
     currency: str = "eur"
     stock: int = Field(..., ge=0)
     active: bool = True
+    image_url: Optional[str] = None
+    source_url: Optional[str] = None
 
 
 def serialize_product(doc: dict) -> ProductPublic:
@@ -51,4 +53,6 @@ def serialize_product(doc: dict) -> ProductPublic:
         currency=doc.get("currency", "eur"),
         stock=doc.get("stock", 0),
         active=doc.get("active", True),
+        image_url=doc.get("image_url"),
+        source_url=doc.get("source_url"),
     )

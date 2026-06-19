@@ -38,7 +38,7 @@ import { useRequireAuth, AuthChecking } from "@/lib/useRequireAuth";
 
 const DRAFT_KEY = "reisolari_ad_draft";
 const inputClass =
-  "w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2 text-sm text-slate-100 outline-none focus:border-emerald-600";
+  "w-full rounded-lg bg-white border border-black/10 px-3 py-2 text-sm text-supaste-ink outline-none focus:border-supaste-blue";
 
 /** Chain of nodes from a root down to the category with `id` (inclusive). */
 function findPath(
@@ -457,18 +457,18 @@ export default function AnunciarPage() {
   }
 
   return (
-    <main className="min-h-screen bg-bg text-slate-100 p-6">
+    <main className="min-h-screen bg-supaste-mist text-supaste-ink p-6">
       <div className="max-w-3xl mx-auto space-y-6">
-        <header className="flex items-center justify-between border-b border-slate-800 pb-4">
+        <header className="flex items-center justify-between border-b border-black/10 pb-4">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-white">Criar anúncio</h1>
-            <p className="text-sm text-slate-400">
+            <h1 className="text-2xl font-bold tracking-tight text-supaste-ink">Criar anúncio</h1>
+            <p className="text-sm text-supaste-muted">
               {user
                 ? "Rascunho guardado na sua conta."
                 : "A guardar rascunho neste dispositivo. Inicie sessão para sincronizar."}
             </p>
           </div>
-          <Link href="/marketplace" className="text-xs font-semibold text-slate-300 hover:text-emerald-300">
+          <Link href="/marketplace" className="text-xs font-semibold text-supaste-muted hover:text-supaste-blue">
             ← Marketplace
           </Link>
         </header>
@@ -483,17 +483,17 @@ export default function AnunciarPage() {
                   onClick={() => index <= step && goStep(index)}
                   className={`h-7 w-7 rounded-full grid place-items-center text-xs font-bold transition-colors ${
                     state === "current"
-                      ? "bg-emerald-500 text-slate-950"
+                      ? "bg-supaste-black text-slate-950"
                       : state === "done"
-                      ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
-                      : "bg-slate-900 text-slate-500 border border-slate-800"
+                      ? "bg-supaste-black/20 text-supaste-blue border border-supaste-green/40"
+                      : "bg-supaste-section text-supaste-muted border border-black/10"
                   }`}
                 >
                   {index < step ? "✓" : index + 1}
                 </button>
                 <span
                   className={`text-[10px] text-center ${
-                    index === step ? "text-emerald-300" : "text-slate-500"
+                    index === step ? "text-supaste-blue" : "text-supaste-muted"
                   }`}
                 >
                   {meta.label}
@@ -503,12 +503,12 @@ export default function AnunciarPage() {
           })}
         </ol>
 
-        <section className="rounded-xl border border-slate-800 bg-card p-5 space-y-4 min-h-[280px]">
+        <section className="rounded-xl border border-black/10 bg-white p-5 space-y-4 min-h-[280px]">
           {/* Step 1 — Categoria */}
           {step === 0 ? (
             <div className="space-y-4">
               <div>
-                <label className="text-xs text-slate-400">Título do anúncio</label>
+                <label className="text-xs text-supaste-muted">Título do anúncio</label>
                 <input
                   {...register("title")}
                   maxLength={60}
@@ -517,7 +517,7 @@ export default function AnunciarPage() {
                 />
                 <div className="flex justify-between mt-1">
                   {err("title") ?? <span />}
-                  <span className="text-[10px] text-slate-500">
+                  <span className="text-[10px] text-supaste-muted">
                     {(values.title?.length ?? 0)}/60
                   </span>
                 </div>
@@ -526,7 +526,7 @@ export default function AnunciarPage() {
               {/* Sugestões automáticas pelo título (NLP/keywords) */}
               {suggestions.length > 0 ? (
                 <div className="space-y-1.5">
-                  <span className="text-[11px] text-slate-400">Sugestões para o seu título</span>
+                  <span className="text-[11px] text-supaste-muted">Sugestões para o seu título</span>
                   <div className="flex flex-wrap gap-2">
                     {suggestions.map(suggestion => {
                       const active = suggestion.category_id === values.category_id;
@@ -537,8 +537,8 @@ export default function AnunciarPage() {
                           onClick={() => applyCategory(suggestion.category_id)}
                           className={`text-[11px] rounded-full px-3 py-1 border transition-colors ${
                             active
-                              ? "bg-emerald-500 text-slate-950 border-emerald-500"
-                              : "border-emerald-500/40 text-emerald-200 hover:bg-emerald-500/10"
+                              ? "bg-supaste-black text-slate-950 border-supaste-green"
+                              : "border-supaste-green/40 text-supaste-blue hover:opacity-90/10"
                           }`}
                         >
                           {suggestion.path_labels.join(" › ")}
@@ -551,9 +551,9 @@ export default function AnunciarPage() {
 
               {/* Seletor em cascata */}
               <div className="space-y-2">
-                <label className="text-xs text-slate-400">Categoria</label>
+                <label className="text-xs text-supaste-muted">Categoria</label>
                 {tree.length === 0 ? (
-                  <p className="text-[11px] text-amber-300/80">
+                  <p className="text-[11px] text-amber-600/80">
                     A carregar taxonomia… (verifique se o backend está acessível)
                   </p>
                 ) : (
@@ -579,7 +579,7 @@ export default function AnunciarPage() {
                   </div>
                 )}
                 {values.category_label ? (
-                  <p className="text-[11px] text-emerald-300/80">{values.category_label}</p>
+                  <p className="text-[11px] text-supaste-blue/80">{values.category_label}</p>
                 ) : null}
                 {err("category_id")}
               </div>
@@ -590,23 +590,23 @@ export default function AnunciarPage() {
           {step === 1 ? (
             <div className="space-y-4">
               {values.category_label ? (
-                <p className="text-[11px] text-slate-400">
-                  Ficha técnica · <span className="text-emerald-300">{values.category_label}</span>
+                <p className="text-[11px] text-supaste-muted">
+                  Ficha técnica · <span className="text-supaste-blue">{values.category_label}</span>
                 </p>
               ) : null}
               <div>
-                <span className="text-xs text-slate-400">Condição do artigo</span>
+                <span className="text-xs text-supaste-muted">Condição do artigo</span>
                 <div className="grid sm:grid-cols-2 gap-2 mt-1.5">
                   {CONDITIONS.map(option => (
                     <label
                       key={option.value}
                       className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm cursor-pointer ${
                         values.condition === option.value
-                          ? "border-emerald-600 bg-emerald-500/10 text-emerald-200"
-                          : "border-slate-700 text-slate-300"
+                          ? "border-supaste-green bg-supaste-black/10 text-supaste-blue"
+                          : "border-black/10 text-supaste-muted"
                       }`}
                     >
-                      <input type="radio" value={option.value} {...register("condition")} className="accent-emerald-500" />
+                      <input type="radio" value={option.value} {...register("condition")} className="accent-supaste-green" />
                       {option.label}
                     </label>
                   ))}
@@ -616,7 +616,7 @@ export default function AnunciarPage() {
 
               {/* Atributos dinâmicos (esquema por categoria) */}
               {attrLoading ? (
-                <p className="text-[11px] text-slate-500">A carregar ficha técnica…</p>
+                <p className="text-[11px] text-supaste-muted">A carregar ficha técnica…</p>
               ) : attrSchema && attrSchema.fields.length > 0 ? (
                 <div className="grid sm:grid-cols-2 gap-3">
                   {attrSchema.fields.map(field => {
@@ -624,10 +624,10 @@ export default function AnunciarPage() {
                     const fieldError = showErrors ? attrErrors[field.key] : undefined;
                     return (
                       <div key={field.key} className={field.type === "select" ? "sm:col-span-1" : ""}>
-                        <label className="text-xs text-slate-400">
+                        <label className="text-xs text-supaste-muted">
                           {field.label}
                           {field.required ? <span className="text-red-300"> *</span> : null}
-                          {field.unit ? <span className="text-slate-500"> ({field.unit})</span> : null}
+                          {field.unit ? <span className="text-supaste-muted"> ({field.unit})</span> : null}
                         </label>
                         {field.type === "select" ? (
                           <select
@@ -672,13 +672,13 @@ export default function AnunciarPage() {
                   })}
                 </div>
               ) : !values.category_id ? (
-                <p className="text-[11px] text-amber-300/80">
+                <p className="text-[11px] text-amber-600/80">
                   Escolha uma categoria na etapa anterior para ver a ficha técnica.
                 </p>
               ) : null}
 
               <div>
-                <label className="text-xs text-slate-400">Descrição</label>
+                <label className="text-xs text-supaste-muted">Descrição</label>
                 <textarea
                   {...register("description")}
                   rows={4}
@@ -706,12 +706,12 @@ export default function AnunciarPage() {
                   addFiles(event.dataTransfer.files);
                 }}
                 className={`rounded-lg border-2 border-dashed p-6 text-center transition-colors ${
-                  dragOver ? "border-emerald-500 bg-emerald-500/5" : "border-slate-700"
+                  dragOver ? "border-supaste-green bg-supaste-black/5" : "border-black/10"
                 }`}
               >
-                <p className="text-sm text-slate-300">
+                <p className="text-sm text-supaste-muted">
                   Arraste fotos para aqui ou{" "}
-                  <label className="cursor-pointer text-emerald-300 hover:text-emerald-200 font-semibold">
+                  <label className="cursor-pointer text-supaste-blue hover:text-supaste-blue font-semibold">
                     escolha ficheiros
                     <input
                       type="file"
@@ -725,13 +725,13 @@ export default function AnunciarPage() {
                     />
                   </label>
                 </p>
-                <p className="text-[11px] text-slate-500 mt-2">
+                <p className="text-[11px] text-supaste-muted mt-2">
                   Até {MAX_IMAGES} fotos · WebP/PNG/JPEG · máx. 5MB · mín. 800×600px
                 </p>
               </div>
 
               {uploading ? (
-                <p className="text-[11px] text-emerald-300">A processar e enviar imagens…</p>
+                <p className="text-[11px] text-supaste-blue">A processar e enviar imagens…</p>
               ) : null}
               {imageError ? <p className="text-[11px] text-red-300">{imageError}</p> : null}
               {err("images")}
@@ -753,12 +753,12 @@ export default function AnunciarPage() {
                           }
                           dragIndex.current = null;
                         }}
-                        className="relative group aspect-square rounded-lg overflow-hidden border border-slate-700 cursor-move"
+                        className="relative group aspect-square rounded-lg overflow-hidden border border-black/10 cursor-move"
                       >
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src={url} alt="" className="w-full h-full object-cover" />
                         {index === 0 ? (
-                          <span className="absolute top-1 left-1 text-[9px] font-bold bg-emerald-500 text-slate-950 px-1.5 py-0.5 rounded">
+                          <span className="absolute top-1 left-1 text-[9px] font-bold bg-supaste-black text-slate-950 px-1.5 py-0.5 rounded">
                             Capa
                           </span>
                         ) : null}
@@ -773,7 +773,7 @@ export default function AnunciarPage() {
                       </div>
                     ))}
                   </div>
-                  <p className="text-[11px] text-slate-500">
+                  <p className="text-[11px] text-supaste-muted">
                     Arraste as miniaturas para reordenar. A primeira foto é a capa do anúncio.
                   </p>
                 </>
@@ -785,22 +785,22 @@ export default function AnunciarPage() {
           {step === 3 ? (
             <div className="space-y-4">
               <div>
-                <span className="text-xs text-slate-400">Tipo de anúncio</span>
+                <span className="text-xs text-supaste-muted">Tipo de anúncio</span>
                 <div className="grid sm:grid-cols-2 gap-2 mt-1.5">
                   {LISTING_TYPES.map(option => (
                     <label
                       key={option.value}
                       className={`flex flex-col gap-0.5 rounded-lg border px-3 py-2 cursor-pointer ${
                         values.listing_type === option.value
-                          ? "border-emerald-600 bg-emerald-500/10"
-                          : "border-slate-700"
+                          ? "border-supaste-green bg-supaste-black/10"
+                          : "border-black/10"
                       }`}
                     >
-                      <span className="flex items-center gap-2 text-sm text-slate-200">
-                        <input type="radio" value={option.value} {...register("listing_type")} className="accent-emerald-500" />
+                      <span className="flex items-center gap-2 text-sm text-supaste-ink">
+                        <input type="radio" value={option.value} {...register("listing_type")} className="accent-supaste-green" />
                         {option.label}
                       </span>
-                      <span className="text-[10px] text-slate-500 pl-5">{option.hint}</span>
+                      <span className="text-[10px] text-supaste-muted pl-5">{option.hint}</span>
                     </label>
                   ))}
                 </div>
@@ -808,9 +808,9 @@ export default function AnunciarPage() {
               </div>
               <div className="grid sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="text-xs text-slate-400">Preço</label>
+                  <label className="text-xs text-supaste-muted">Preço</label>
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400">€</span>
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-supaste-muted">€</span>
                     <input
                       type="text"
                       inputMode="numeric"
@@ -825,7 +825,7 @@ export default function AnunciarPage() {
                   {err("price_eur")}
                 </div>
                 <div>
-                  <label className="text-xs text-slate-400">Quantidade</label>
+                  <label className="text-xs text-supaste-muted">Quantidade</label>
                   <input
                     type="number"
                     min="1"
@@ -835,7 +835,7 @@ export default function AnunciarPage() {
                   {err("stock")}
                 </div>
               </div>
-              <p className="text-[11px] text-slate-500">
+              <p className="text-[11px] text-supaste-muted">
                 Para venda casual entre particulares, mantenha a quantidade em 1.
               </p>
             </div>
@@ -846,7 +846,7 @@ export default function AnunciarPage() {
             <div className="space-y-4">
               <div className="grid sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="text-xs text-slate-400">Código postal</label>
+                  <label className="text-xs text-supaste-muted">Código postal</label>
                   <input
                     {...register("postal_code")}
                     className={inputClass}
@@ -854,30 +854,30 @@ export default function AnunciarPage() {
                     maxLength={8}
                   />
                   {geoLoading ? (
-                    <p className="text-[11px] text-slate-500 mt-1">A localizar…</p>
+                    <p className="text-[11px] text-supaste-muted mt-1">A localizar…</p>
                   ) : geoInfo ? (
-                    <p className="text-[11px] text-emerald-300/80 mt-1">📍 {geoInfo}</p>
+                    <p className="text-[11px] text-supaste-blue/80 mt-1">📍 {geoInfo}</p>
                   ) : null}
                   {err("postal_code")}
                 </div>
                 <div>
-                  <label className="text-xs text-slate-400">Localidade</label>
+                  <label className="text-xs text-supaste-muted">Localidade</label>
                   <input {...register("city")} className={inputClass} placeholder="Lisboa" />
                   {err("city")}
                 </div>
               </div>
               <div className="space-y-2">
-                <span className="text-xs text-slate-400">Métodos de entrega</span>
-                <label className="flex items-center gap-2 text-sm text-slate-300">
-                  <input type="checkbox" {...register("pickup")} className="accent-emerald-500" />
+                <span className="text-xs text-supaste-muted">Métodos de entrega</span>
+                <label className="flex items-center gap-2 text-sm text-supaste-muted">
+                  <input type="checkbox" {...register("pickup")} className="accent-supaste-green" />
                   Entrega em mãos / ponto de encontro
                 </label>
-                <label className="flex items-center gap-2 text-sm text-slate-300">
-                  <input type="checkbox" {...register("shipping")} className="accent-emerald-500" />
+                <label className="flex items-center gap-2 text-sm text-supaste-muted">
+                  <input type="checkbox" {...register("shipping")} className="accent-supaste-green" />
                   Envio por transportadora (CTT)
                 </label>
               </div>
-              <p className="text-[11px] text-slate-500">
+              <p className="text-[11px] text-supaste-muted">
                 🔒 Por privacidade, o anúncio público mostra apenas a localidade (
                 {values.city || "ex.: Lisboa"}) — nunca a rua ou o número.
               </p>
@@ -891,23 +891,23 @@ export default function AnunciarPage() {
             <button
               onClick={() => goStep(step - 1)}
               disabled={step === 0}
-              className="px-4 py-2 rounded-lg text-sm font-semibold text-slate-300 bg-slate-900 border border-slate-800 disabled:opacity-40 disabled:cursor-not-allowed"
+              className="px-4 py-2 rounded-lg text-sm font-semibold text-supaste-muted bg-supaste-section border border-black/10 disabled:opacity-40 disabled:cursor-not-allowed"
             >
               Anterior
             </button>
-            <button onClick={clearDraft} className="text-[11px] text-slate-500 hover:text-red-400">
+            <button onClick={clearDraft} className="text-[11px] text-supaste-muted hover:text-red-400">
               Limpar rascunho
             </button>
           </div>
 
           <div className="flex items-center gap-3">
             {savedAt ? (
-              <span className="text-[10px] text-slate-500">Guardado às {savedAt}</span>
+              <span className="text-[10px] text-supaste-muted">Guardado às {savedAt}</span>
             ) : null}
             {step < STEPS.length - 1 ? (
               <button
                 onClick={next}
-                className="px-5 py-2 rounded-lg text-sm font-semibold text-slate-950 bg-emerald-500 hover:bg-emerald-400 transition-colors"
+                className="px-5 py-2 rounded-lg text-sm font-semibold text-white bg-supaste-black hover:opacity-90 transition-colors"
               >
                 Próximo
               </button>
@@ -915,7 +915,7 @@ export default function AnunciarPage() {
               <button
                 onClick={finish}
                 disabled={!allValid || publishing}
-                className="px-5 py-2 rounded-lg text-sm font-semibold text-slate-950 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="px-5 py-2 rounded-lg text-sm font-semibold text-white bg-supaste-black hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 {publishing ? "A publicar…" : "Publicar anúncio"}
               </button>
@@ -930,11 +930,11 @@ export default function AnunciarPage() {
         ) : null}
 
         {done && publishedId ? (
-          <div className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 p-4 text-sm text-emerald-200 flex items-center justify-between gap-3">
+          <div className="rounded-lg border border-supaste-green/40 bg-supaste-black/10 p-4 text-sm text-supaste-blue flex items-center justify-between gap-3">
             <span>Anúncio publicado com sucesso! 🎉</span>
             <Link
               href="/marketplace"
-              className="font-semibold text-emerald-300 hover:text-emerald-200 whitespace-nowrap"
+              className="font-semibold text-supaste-blue hover:text-supaste-blue whitespace-nowrap"
             >
               Ver no marketplace →
             </Link>

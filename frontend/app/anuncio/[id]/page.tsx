@@ -2,9 +2,12 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { ArrowLeft, Eye, Handshake, Heart, MessageCircle, Shield, ShoppingCart, Star, Truck } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { formatPrice, fetchCategoryAttributes, type AttributeField } from "@/lib/api";
+import Reveal from "@/components/Reveal";
 import {
   getListing,
   markListingSold,
@@ -193,10 +196,10 @@ export default function AnuncioPage({ params }: { params: { id: string } }) {
 
   if (notFound) {
     return (
-      <main className="min-h-screen bg-bg text-slate-100 grid place-items-center p-6">
+      <main className="min-h-screen bg-supaste-mist text-supaste-ink grid place-items-center p-6">
         <div className="text-center space-y-3">
-          <p className="text-slate-300">Anúncio não encontrado.</p>
-          <Link href="/marketplace" className="text-emerald-400 font-semibold">
+          <p className="text-supaste-muted">Anúncio não encontrado.</p>
+          <Link href="/marketplace" className="text-supaste-blue font-semibold">
             ← Marketplace
           </Link>
         </div>
@@ -206,8 +209,8 @@ export default function AnuncioPage({ params }: { params: { id: string } }) {
 
   if (!listing) {
     return (
-      <main className="min-h-screen bg-bg text-slate-100 grid place-items-center p-6">
-        <p className="text-sm text-slate-400">A carregar…</p>
+      <main className="min-h-screen bg-supaste-mist text-supaste-ink grid place-items-center p-6">
+        <p className="text-sm text-supaste-muted">A carregar…</p>
       </main>
     );
   }
@@ -229,42 +232,44 @@ export default function AnuncioPage({ params }: { params: { id: string } }) {
       }));
 
   return (
-    <main className="min-h-screen bg-bg text-slate-100 p-6">
-      <div className="max-w-4xl mx-auto space-y-5">
-        <div className="flex items-center justify-between">
-          <Link href="/marketplace" className="text-xs font-semibold text-slate-300 hover:text-emerald-300">
-            ← Marketplace
+    <main className="flex min-h-screen flex-col bg-supaste-mist text-supaste-ink">
+      <header className="px-4 pt-5">
+        <nav className="supaste-glass-strong mx-auto flex max-w-4xl items-center justify-between rounded-full px-4 py-2.5">
+          <Link href="/marketplace" className="flex items-center gap-1.5 text-sm font-medium text-supaste-muted transition-colors hover:text-supaste-ink">
+            <ArrowLeft className="h-4 w-4" /> Marketplace
           </Link>
-          <Link href="/diretrizes" className="text-[11px] text-slate-400 hover:text-emerald-300">
-            🔒 Comprar em segurança
+          <Link href="/diretrizes" className="flex items-center gap-1.5 text-xs font-medium text-supaste-muted transition-colors hover:text-supaste-blue">
+            <Shield className="h-4 w-4" /> Comprar em segurança
           </Link>
-        </div>
+        </nav>
+      </header>
 
+      <div className="mx-auto w-full max-w-4xl flex-1 space-y-5 px-6 py-8">
         {listing.status === "sold" ? (
-          <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-200 text-center font-semibold">
+          <div className="rounded-2xl bg-amber-50 px-4 py-3 text-center text-sm font-semibold text-amber-700">
             Este anúncio foi marcado como vendido.
           </div>
         ) : null}
 
-        <div className="grid md:grid-cols-2 gap-6">
+        <Reveal className="grid gap-6 md:grid-cols-2">
           {/* Gallery */}
           <div className="space-y-2">
-            <div className="aspect-[4/3] rounded-xl bg-slate-950 border border-slate-800 overflow-hidden grid place-items-center">
+            <div className="grid aspect-[4/3] place-items-center overflow-hidden rounded-[24px] bg-white shadow-soft-float">
               {images[activeImage] ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={images[activeImage]} alt={listing.title} className="h-full w-full object-cover" />
               ) : (
-                <span className="text-xs text-slate-500">Sem imagem</span>
+                <span className="text-xs text-supaste-muted">Sem imagem</span>
               )}
             </div>
             {images.length > 1 ? (
-              <div className="flex gap-2 overflow-auto">
+              <div className="flex gap-2 overflow-auto pb-1">
                 {images.map((url, index) => (
                   <button
                     key={url}
                     onClick={() => setActiveImage(index)}
-                    className={`h-14 w-14 rounded overflow-hidden border shrink-0 ${
-                      index === activeImage ? "border-emerald-500" : "border-slate-800"
+                    className={`h-16 w-16 shrink-0 overflow-hidden rounded-2xl ring-2 transition ${
+                      index === activeImage ? "ring-supaste-blue" : "ring-transparent hover:ring-black/10"
                     }`}
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -276,36 +281,36 @@ export default function AnuncioPage({ params }: { params: { id: string } }) {
           </div>
 
           {/* Summary + actions */}
-          <div className="space-y-3">
+          <div className="rounded-[24px] bg-white p-6 shadow-soft-float">
             <div className="flex items-center gap-2">
-              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+              <span className="rounded-full bg-supaste-blue/10 px-3 py-1 text-[11px] font-semibold text-supaste-blue">
                 {conditionLabels[listing.condition] ?? listing.condition}
               </span>
               {listing.listing_type === "premium" ? (
-                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-400/20 text-amber-300">Premium</span>
+                <span className="rounded-full bg-amber-100 px-3 py-1 text-[11px] font-semibold text-amber-700">Premium</span>
               ) : null}
             </div>
 
-            <h1 className="text-2xl font-bold text-white leading-tight">{listing.title}</h1>
-            <p className="text-2xl font-bold text-emerald-400">
+            <h1 className="mt-3 font-display text-2xl font-semibold leading-tight tracking-tight">{listing.title}</h1>
+            <p className="mt-1 font-display text-3xl font-semibold tracking-tight text-supaste-blue">
               {formatPrice(listing.price_cents, listing.currency)}
             </p>
 
-            <p className="text-[11px] text-slate-400">
+            <p className="mt-2 text-xs text-supaste-muted">
               {listing.category_path?.length ? listing.category_path.join(" › ") : ""}
               {listing.city ? ` · ${listing.city}` : ""}
             </p>
-
-            <p className="text-[11px] text-slate-500">
-              👁 {views} {views === 1 ? "visualização" : "visualizações"}
+            <p className="mt-1 flex items-center gap-1 text-xs text-supaste-muted">
+              <Eye className="h-3.5 w-3.5" /> {views} {views === 1 ? "visualização" : "visualizações"}
             </p>
 
-            <div className="flex items-center gap-2 pt-1">
+            <div className="mt-4 flex items-center gap-2">
               <button
                 onClick={toggleFavorite}
-                className="flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-semibold text-slate-200 bg-slate-800 border border-slate-700 hover:border-emerald-700"
+                className="flex items-center gap-1.5 rounded-full bg-supaste-section px-4 py-2.5 text-sm font-semibold text-supaste-ink transition hover:bg-[#e6e9ef]"
+                aria-label="Favorito"
               >
-                <span aria-hidden>{favorited ? "❤️" : "🤍"}</span>
+                <Heart className={`h-4 w-4 ${favorited ? "fill-red-500 text-red-500" : ""}`} />
                 {favCount > 0 ? <span className="text-xs">{favCount}</span> : null}
               </button>
 
@@ -313,17 +318,17 @@ export default function AnuncioPage({ params }: { params: { id: string } }) {
                 <>
                   <Link
                     href={`/anuncio/${id}/editar`}
-                    className="flex-1 px-4 py-2 rounded-lg text-sm font-semibold text-center text-slate-200 bg-slate-800 border border-slate-700 hover:border-emerald-700"
+                    className="flex-1 rounded-full bg-supaste-section px-4 py-2.5 text-center text-sm font-semibold text-supaste-ink transition hover:bg-[#e6e9ef]"
                   >
                     Editar
                   </Link>
                   <button
                     onClick={toggleSold}
                     disabled={busy}
-                    className={`flex-1 px-4 py-2 rounded-lg text-sm font-semibold disabled:opacity-50 ${
+                    className={`flex-1 rounded-full px-4 py-2.5 text-sm font-semibold disabled:opacity-50 ${
                       listing.status === "sold"
-                        ? "text-emerald-300 bg-slate-800 border border-slate-700 hover:border-emerald-700"
-                        : "text-slate-950 bg-amber-400 hover:bg-amber-300"
+                        ? "bg-supaste-section text-supaste-ink hover:bg-[#e6e9ef]"
+                        : "bg-amber-400 text-supaste-black hover:bg-amber-300"
                     }`}
                   >
                     {listing.status === "sold" ? "Reativar" : "Marcar vendido"}
@@ -334,36 +339,40 @@ export default function AnuncioPage({ params }: { params: { id: string } }) {
                   <button
                     onClick={() => openChat(false)}
                     disabled={busy || listing.status === "sold"}
-                    className="flex-1 px-4 py-2 rounded-lg text-sm font-semibold text-slate-200 bg-slate-800 border border-slate-700 hover:border-emerald-700 disabled:opacity-50"
+                    className="flex flex-1 items-center justify-center gap-2 rounded-full bg-supaste-section px-4 py-2.5 text-sm font-semibold text-supaste-ink transition hover:bg-[#e6e9ef] disabled:opacity-50"
                   >
-                    💬 Mensagem
+                    <MessageCircle className="h-4 w-4" /> Mensagem
                   </button>
                   <button
                     onClick={() => openChat(true)}
                     disabled={busy || listing.status === "sold"}
-                    className="flex-1 px-4 py-2 rounded-lg text-sm font-semibold text-slate-950 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50"
+                    className="supaste-button flex flex-1 items-center justify-center gap-2 rounded-full bg-supaste-black px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
                   >
-                    🛒 Comprar
+                    <ShoppingCart className="h-4 w-4" /> Comprar
                   </button>
                 </>
               )}
             </div>
 
-            <div className="flex flex-wrap gap-2 pt-1 text-[11px] text-slate-400">
+            <div className="mt-3 flex flex-wrap gap-2 text-[11px] font-medium text-supaste-muted">
               {listing.delivery_pickup ? (
-                <span className="px-2 py-1 rounded bg-slate-900 border border-slate-800">🤝 Entrega em mãos</span>
+                <span className="flex items-center gap-1.5 rounded-full bg-supaste-section px-3 py-1.5">
+                  <Handshake className="h-3.5 w-3.5" /> Entrega em mãos
+                </span>
               ) : null}
               {listing.delivery_shipping ? (
-                <span className="px-2 py-1 rounded bg-slate-900 border border-slate-800">📦 Envio por transportadora</span>
+                <span className="flex items-center gap-1.5 rounded-full bg-supaste-section px-3 py-1.5">
+                  <Truck className="h-3.5 w-3.5" /> Envio por transportadora
+                </span>
               ) : null}
             </div>
 
             {!isOwner && seller ? (
               <Link
                 href={`/perfil/${listing.owner_id}`}
-                className="flex items-center gap-2 rounded-lg border border-slate-800 bg-card p-2 w-fit hover:border-emerald-700 transition-colors"
+                className="mt-4 flex w-fit items-center gap-2.5 rounded-2xl bg-supaste-section p-2.5 pr-4 transition hover:bg-[#e6e9ef]"
               >
-                <div className="h-9 w-9 rounded-full bg-slate-800 overflow-hidden grid place-items-center text-sm font-bold text-emerald-400 shrink-0">
+                <div className="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-full bg-white text-sm font-bold text-supaste-blue">
                   {seller.avatar_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={seller.avatar_url} alt="" className="h-full w-full object-cover" />
@@ -371,56 +380,62 @@ export default function AnuncioPage({ params }: { params: { id: string } }) {
                     seller.display_name.charAt(0).toUpperCase()
                   )}
                 </div>
-                <div className="text-[11px] leading-tight">
-                  <p className="text-slate-200 font-semibold">{seller.display_name}</p>
-                  <p className="text-slate-400">
-                    {seller.rating.count > 0
-                      ? `★ ${seller.rating.average.toFixed(1)} · ${seller.rating.count} ${
-                          seller.rating.count === 1 ? "avaliação" : "avaliações"
-                        }`
-                      : "Sem avaliações ainda"}
+                <div className="text-xs leading-tight">
+                  <p className="font-semibold text-supaste-ink">{seller.display_name}</p>
+                  <p className="flex items-center gap-1 text-supaste-muted">
+                    {seller.rating.count > 0 ? (
+                      <>
+                        <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+                        {seller.rating.average.toFixed(1)} · {seller.rating.count}{" "}
+                        {seller.rating.count === 1 ? "avaliação" : "avaliações"}
+                      </>
+                    ) : (
+                      "Sem avaliações ainda"
+                    )}
                   </p>
                 </div>
               </Link>
             ) : null}
           </div>
-        </div>
+        </Reveal>
 
         {/* Ficha técnica */}
         {filledAttributes.length > 0 ? (
-          <section className="rounded-xl border border-slate-800 bg-card p-5">
-            <h2 className="text-sm font-semibold text-white mb-3">Ficha técnica</h2>
-            <dl className="grid sm:grid-cols-2 gap-x-6 gap-y-2">
+          <Reveal className="rounded-[24px] bg-white p-6 shadow-soft-float">
+            <h2 className="mb-3 font-display text-lg font-semibold tracking-tight">Ficha técnica</h2>
+            <dl className="grid gap-x-8 gap-y-2.5 sm:grid-cols-2">
               {filledAttributes.map(attribute => (
-                <div key={attribute.label} className="flex justify-between gap-3 border-b border-slate-800/60 pb-1.5">
-                  <dt className="text-xs text-slate-400">{attribute.label}</dt>
-                  <dd className="text-xs text-slate-100 font-medium text-right">{attribute.value}</dd>
+                <div key={attribute.label} className="flex justify-between gap-3 border-b border-black/5 pb-2">
+                  <dt className="text-sm text-supaste-muted">{attribute.label}</dt>
+                  <dd className="text-right text-sm font-medium text-supaste-ink">{attribute.value}</dd>
                 </div>
               ))}
             </dl>
-          </section>
+          </Reveal>
         ) : null}
 
         {/* Descrição */}
-        <section className="rounded-xl border border-slate-800 bg-card p-5">
-          <h2 className="text-sm font-semibold text-white mb-2">Descrição</h2>
-          <p className="text-sm text-slate-300 whitespace-pre-wrap break-words">{listing.description}</p>
-        </section>
+        <Reveal className="rounded-[24px] bg-white p-6 shadow-soft-float">
+          <h2 className="mb-2 font-display text-lg font-semibold tracking-tight">Descrição</h2>
+          <p className="whitespace-pre-wrap break-words text-sm leading-relaxed text-supaste-muted">{listing.description}</p>
+        </Reveal>
 
-        <p className="text-[11px] text-slate-500">
-          🔒 Negocie sempre dentro da Reisolari. Veja as{" "}
-          <Link href="/diretrizes" className="text-emerald-300 hover:text-emerald-200">
-            diretrizes de segurança
-          </Link>{" "}
-          para evitar burlas.
+        <p className="flex items-center gap-1.5 text-xs text-supaste-muted">
+          <Shield className="h-4 w-4 shrink-0" /> Negocie sempre dentro da Reisolari. Veja as{" "}
+          <Link href="/diretrizes" className="font-semibold text-supaste-blue hover:underline">diretrizes de segurança</Link> para evitar burlas.
         </p>
 
         {!isOwner ? (
-          <div>
-            <ReportDialog targetType="listing" targetId={id} alreadyReported={reported} label="🚩 Denunciar este anúncio" />
-          </div>
+          <ReportDialog targetType="listing" targetId={id} alreadyReported={reported} label="Denunciar este anúncio" />
         ) : null}
       </div>
+
+      <footer className="border-t border-black/5">
+        <div className="mx-auto flex max-w-4xl items-center justify-center gap-2.5 px-6 py-8">
+          <Image src="/images/reisolari-logo.jpeg" alt="" width={26} height={26} className="rounded-full" />
+          <span className="font-display font-semibold text-supaste-ink">Reisolari</span>
+        </div>
+      </footer>
     </main>
   );
 }

@@ -25,7 +25,14 @@ export type Product = {
   currency: string;
   stock: number;
   active: boolean;
+  image_url?: string | null;
+  source_url?: string | null;
 };
+
+export async function fetchProduct(slug: string): Promise<Product> {
+  const res = await axios.get<Product>(`${backendUrl}/api/v1/products/${encodeURIComponent(slug)}`);
+  return res.data;
+}
 
 export type OrderRegion = "continent" | "madeira" | "azores";
 export type OrderStatus = "pending" | "paid" | "cancelled" | "failed";

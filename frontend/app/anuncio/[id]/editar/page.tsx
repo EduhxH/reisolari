@@ -11,7 +11,7 @@ import { getListing, updateListing, type ListingDetail } from "@/lib/listings";
 import { useRequireAuth, AuthChecking } from "@/lib/useRequireAuth";
 
 const inputClass =
-  "w-full mt-1 rounded-lg bg-slate-950 border border-slate-700 px-3 py-2 text-sm text-slate-100 outline-none focus:border-emerald-600";
+  "w-full mt-1 rounded-lg bg-white border border-black/10 px-3 py-2 text-sm text-supaste-ink outline-none focus:border-supaste-blue";
 
 export default function EditarAnuncioPage({ params }: { params: { id: string } }) {
   const { id } = params;
@@ -124,10 +124,10 @@ export default function EditarAnuncioPage({ params }: { params: { id: string } }
 
   if (notFound) {
     return (
-      <main className="min-h-screen bg-bg text-slate-100 grid place-items-center p-6">
+      <main className="min-h-screen bg-supaste-mist text-supaste-ink grid place-items-center p-6">
         <div className="text-center space-y-3">
-          <p className="text-slate-300">Anúncio não encontrado.</p>
-          <Link href="/marketplace" className="text-emerald-400 font-semibold">← Marketplace</Link>
+          <p className="text-supaste-muted">Anúncio não encontrado.</p>
+          <Link href="/marketplace" className="text-supaste-blue font-semibold">← Marketplace</Link>
         </div>
       </main>
     );
@@ -139,54 +139,54 @@ export default function EditarAnuncioPage({ params }: { params: { id: string } }
 
   if (!listing || authLoading) {
     return (
-      <main className="min-h-screen bg-bg text-slate-100 grid place-items-center p-6">
-        <p className="text-sm text-slate-400">A carregar…</p>
+      <main className="min-h-screen bg-supaste-mist text-supaste-ink grid place-items-center p-6">
+        <p className="text-sm text-supaste-muted">A carregar…</p>
       </main>
     );
   }
 
   if (!isOwner) {
     return (
-      <main className="min-h-screen bg-bg text-slate-100 grid place-items-center p-6">
+      <main className="min-h-screen bg-supaste-mist text-supaste-ink grid place-items-center p-6">
         <div className="text-center space-y-3">
-          <p className="text-slate-300">Só o autor do anúncio o pode editar.</p>
-          <Link href={`/anuncio/${id}`} className="text-emerald-400 font-semibold">Ver anúncio</Link>
+          <p className="text-supaste-muted">Só o autor do anúncio o pode editar.</p>
+          <Link href={`/anuncio/${id}`} className="text-supaste-blue font-semibold">Ver anúncio</Link>
         </div>
       </main>
     );
   }
 
   return (
-    <main className="min-h-screen bg-bg text-slate-100 p-6">
+    <main className="min-h-screen bg-supaste-mist text-supaste-ink p-6">
       <div className="max-w-2xl mx-auto space-y-5">
-        <header className="flex items-center justify-between border-b border-slate-800 pb-4">
-          <h1 className="text-2xl font-bold text-white">Editar anúncio</h1>
-          <Link href={`/anuncio/${id}`} className="text-xs font-semibold text-slate-300 hover:text-emerald-300">
+        <header className="flex items-center justify-between border-b border-black/10 pb-4">
+          <h1 className="text-2xl font-bold text-supaste-ink">Editar anúncio</h1>
+          <Link href={`/anuncio/${id}`} className="text-xs font-semibold text-supaste-muted hover:text-supaste-blue">
             Cancelar
           </Link>
         </header>
 
         <div>
-          <label className="text-xs text-slate-400">Título</label>
+          <label className="text-xs text-supaste-muted">Título</label>
           <input value={title} onChange={e => setTitle(e.target.value)} maxLength={120} className={inputClass} />
         </div>
 
         <div>
-          <label className="text-xs text-slate-400">Descrição</label>
+          <label className="text-xs text-supaste-muted">Descrição</label>
           <textarea value={description} onChange={e => setDescription(e.target.value)} rows={4} maxLength={4000} className={inputClass} />
         </div>
 
         <div>
-          <span className="text-xs text-slate-400">Condição</span>
+          <span className="text-xs text-supaste-muted">Condição</span>
           <div className="grid sm:grid-cols-2 gap-2 mt-1.5">
             {CONDITIONS.map(option => (
               <label
                 key={option.value}
                 className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm cursor-pointer ${
-                  condition === option.value ? "border-emerald-600 bg-emerald-500/10 text-emerald-200" : "border-slate-700 text-slate-300"
+                  condition === option.value ? "border-supaste-green bg-supaste-black/10 text-supaste-blue" : "border-black/10 text-supaste-muted"
                 }`}
               >
-                <input type="radio" checked={condition === option.value} onChange={() => setCondition(option.value)} className="accent-emerald-500" />
+                <input type="radio" checked={condition === option.value} onChange={() => setCondition(option.value)} className="accent-supaste-green" />
                 {option.label}
               </label>
             ))}
@@ -195,15 +195,15 @@ export default function EditarAnuncioPage({ params }: { params: { id: string } }
 
         {fields && fields.length > 0 ? (
           <div>
-            <span className="text-xs text-slate-400">Ficha técnica</span>
+            <span className="text-xs text-supaste-muted">Ficha técnica</span>
             <div className="grid sm:grid-cols-2 gap-3 mt-1.5">
               {fields.map(field => {
                 const value = attributes?.[field.key] ?? "";
                 return (
                   <div key={field.key}>
-                    <label className="text-[11px] text-slate-400">
+                    <label className="text-[11px] text-supaste-muted">
                       {field.label}
-                      {field.unit ? <span className="text-slate-500"> ({field.unit})</span> : null}
+                      {field.unit ? <span className="text-supaste-muted"> ({field.unit})</span> : null}
                     </label>
                     {field.type === "select" ? (
                       <select value={String(value)} onChange={e => setAttr(field.key, e.target.value || undefined)} className={inputClass}>
@@ -231,9 +231,9 @@ export default function EditarAnuncioPage({ params }: { params: { id: string } }
 
         <div className="grid sm:grid-cols-2 gap-4">
           <div>
-            <label className="text-xs text-slate-400">Preço</label>
+            <label className="text-xs text-supaste-muted">Preço</label>
             <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400">€</span>
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-supaste-muted">€</span>
               <input
                 type="text"
                 inputMode="numeric"
@@ -245,32 +245,32 @@ export default function EditarAnuncioPage({ params }: { params: { id: string } }
             </div>
           </div>
           <div>
-            <label className="text-xs text-slate-400">Quantidade</label>
+            <label className="text-xs text-supaste-muted">Quantidade</label>
             <input type="number" min={1} value={stock} onChange={e => setStock(Math.max(1, Number(e.target.value) || 1))} className={inputClass} />
           </div>
         </div>
 
         <div className="space-y-2">
-          <span className="text-xs text-slate-400">Métodos de entrega</span>
-          <label className="flex items-center gap-2 text-sm text-slate-300">
-            <input type="checkbox" checked={pickup} onChange={e => setPickup(e.target.checked)} className="accent-emerald-500" />
+          <span className="text-xs text-supaste-muted">Métodos de entrega</span>
+          <label className="flex items-center gap-2 text-sm text-supaste-muted">
+            <input type="checkbox" checked={pickup} onChange={e => setPickup(e.target.checked)} className="accent-supaste-green" />
             Entrega em mãos / ponto de encontro
           </label>
-          <label className="flex items-center gap-2 text-sm text-slate-300">
-            <input type="checkbox" checked={shipping} onChange={e => setShipping(e.target.checked)} className="accent-emerald-500" />
+          <label className="flex items-center gap-2 text-sm text-supaste-muted">
+            <input type="checkbox" checked={shipping} onChange={e => setShipping(e.target.checked)} className="accent-supaste-green" />
             Envio por transportadora (CTT)
           </label>
         </div>
 
         <div>
-          <span className="text-xs text-slate-400">Imagens ({images.length}/{MAX_IMAGES})</span>
+          <span className="text-xs text-supaste-muted">Imagens ({images.length}/{MAX_IMAGES})</span>
           <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 mt-1.5">
             {images.map((url, index) => (
-              <div key={url} className="relative aspect-square rounded-lg overflow-hidden border border-slate-800 group">
+              <div key={url} className="relative aspect-square rounded-lg overflow-hidden border border-black/10 group">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={url} alt="" className="h-full w-full object-cover" />
                 {index === 0 ? (
-                  <span className="absolute top-1 left-1 text-[9px] font-bold bg-emerald-500 text-slate-950 rounded px-1">Capa</span>
+                  <span className="absolute top-1 left-1 text-[9px] font-bold bg-supaste-black text-slate-950 rounded px-1">Capa</span>
                 ) : (
                   <button
                     onClick={() => setImages(prev => [url, ...prev.filter(u => u !== url)])}
@@ -289,7 +289,7 @@ export default function EditarAnuncioPage({ params }: { params: { id: string } }
               </div>
             ))}
             {images.length < MAX_IMAGES ? (
-              <label className="aspect-square rounded-lg border border-dashed border-slate-700 grid place-items-center text-xs text-slate-500 cursor-pointer hover:border-emerald-700">
+              <label className="aspect-square rounded-lg border border-dashed border-black/10 grid place-items-center text-xs text-supaste-muted cursor-pointer hover:border-supaste-blue">
                 {uploading ? "…" : "+ Imagem"}
                 <input
                   type="file"
@@ -310,19 +310,19 @@ export default function EditarAnuncioPage({ params }: { params: { id: string } }
           <div className="rounded-lg border border-red-500/40 bg-red-950/30 p-3 text-sm text-red-200">{error}</div>
         ) : null}
 
-        <div className="flex items-center gap-3 border-t border-slate-800 pt-4">
+        <div className="flex items-center gap-3 border-t border-black/10 pt-4">
           <button
             onClick={save}
             disabled={saving || !valid}
-            className="px-5 py-2 rounded-lg text-sm font-semibold text-slate-950 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-5 py-2 rounded-lg text-sm font-semibold text-white bg-supaste-black hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {saving ? "A guardar…" : "Guardar alterações"}
           </button>
-          <Link href={`/anuncio/${id}`} className="text-xs text-slate-400 hover:text-emerald-300">
+          <Link href={`/anuncio/${id}`} className="text-xs text-supaste-muted hover:text-supaste-blue">
             Cancelar
           </Link>
           {!valid ? (
-            <span className="text-[11px] text-slate-500">Preencha título, descrição e preço válidos.</span>
+            <span className="text-[11px] text-supaste-muted">Preencha título, descrição e preço válidos.</span>
           ) : null}
         </div>
       </div>

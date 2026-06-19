@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { useRequireAuth, AuthChecking } from "@/lib/useRequireAuth";
@@ -35,7 +37,14 @@ const PRIORITIES: { value: Priority; label: string; hint: string }[] = [
 const STEPS = ["Consumo", "Localização e telhado", "Objetivo", "Económico"];
 
 const inputClass =
-  "w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2 text-sm text-slate-100 outline-none focus:border-emerald-600";
+  "w-full rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm text-supaste-ink outline-none transition-colors focus:border-supaste-blue";
+
+const pill = (active: boolean) =>
+  `rounded-full px-4 py-2 text-sm font-semibold transition-colors ${
+    active
+      ? "bg-supaste-black text-white"
+      : "bg-supaste-section text-supaste-ink hover:bg-[#ececef]"
+  }`;
 
 export default function QuestionarioPage() {
   const router = useRouter();
@@ -49,7 +58,6 @@ export default function QuestionarioPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Pré-preenche se o utilizador já respondeu antes (refazer questionário).
   useEffect(() => {
     if (!user) return;
     let cancelled = false;
@@ -131,30 +139,41 @@ export default function QuestionarioPage() {
 
   if (!ready) return <AuthChecking />;
 
-  const canNext =
-    step !== 0 || (q.consumption_kwh > 0 && Number.isFinite(q.consumption_kwh));
+  const canNext = step !== 0 || (q.consumption_kwh > 0 && Number.isFinite(q.consumption_kwh));
 
   return (
-    <main className="min-h-screen bg-bg text-slate-100 p-6">
-      <div className="max-w-3xl mx-auto space-y-6">
-        <header className="space-y-1">
-          <h1 className="text-2xl font-bold text-white">Simulador solar</h1>
-          <p className="text-sm text-slate-400">
+    <main className="min-h-screen bg-supaste-mist text-supaste-ink">
+      <header className="px-4 pt-5">
+        <nav className="supaste-glass-strong mx-auto flex max-w-3xl items-center justify-between rounded-full px-4 py-2.5">
+          <Link href="/" className="flex items-center gap-2.5">
+            <Image src="/images/reisolari-logo.jpeg" alt="Reisolari" width={30} height={30} className="rounded-full" />
+            <span className="font-display text-base font-semibold tracking-tight">Reisolari</span>
+          </Link>
+          <Link href="/conta" className="text-sm font-medium text-supaste-muted transition-colors hover:text-supaste-ink">
+            A minha conta
+          </Link>
+        </nav>
+      </header>
+
+      <div className="mx-auto max-w-3xl px-6 py-10 space-y-7">
+        <div className="space-y-2 text-center">
+          <h1 className="font-display text-3xl font-semibold tracking-tight">Simulador solar</h1>
+          <p className="text-sm text-supaste-muted">
             Responda a este questionário rápido para receber as suas propostas ideais.
           </p>
-        </header>
+        </div>
 
         {/* Stepper */}
-        <ol className="flex flex-wrap gap-2">
+        <ol className="flex flex-wrap justify-center gap-2">
           {STEPS.map((label, i) => (
             <li
               key={label}
-              className={`px-3 py-1.5 rounded-full text-xs font-semibold border ${
+              className={`rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${
                 i === step
-                  ? "bg-emerald-500 text-slate-950 border-emerald-500"
+                  ? "bg-supaste-black text-white"
                   : i < step
-                  ? "bg-slate-800 text-emerald-300 border-slate-700"
-                  : "bg-slate-900 text-slate-500 border-slate-800"
+                  ? "bg-white text-supaste-blue shadow-soft-float"
+                  : "bg-white text-supaste-muted"
               }`}
             >
               {i + 1}. {label}
@@ -162,16 +181,16 @@ export default function QuestionarioPage() {
           ))}
         </ol>
 
-        <section className="rounded-xl border border-slate-800 bg-card p-5 space-y-4">
+        <section className="rounded-[28px] bg-white p-7 shadow-soft-float">
           {/* Step 0 — Consumo + fatura */}
           {step === 0 ? (
-            <div className="space-y-4">
-              <div className="rounded-lg border border-dashed border-slate-700 p-4 space-y-2">
+            <div className="space-y-5">
+              <div className="rounded-2xl border border-dashed border-black/10 bg-supaste-section p-5 space-y-2">
                 <div className="text-sm font-semibold">Fatura de luz (opcional)</div>
-                <p className="text-xs text-slate-400">
+                <p className="text-xs text-supaste-muted">
                   Envie a sua fatura (PDF ou foto) e tentamos ler o consumo automaticamente.
                 </p>
-                <label className="inline-block text-xs font-semibold text-emerald-300 border border-emerald-500/40 rounded px-3 py-1.5 cursor-pointer hover:bg-emerald-500/10">
+                <label className="inline-flex cursor-pointer items-center rounded-full bg-supaste-black px-4 py-2 text-xs font-semibold text-white">
                   {billBusy ? "A analisar…" : "Carregar fatura"}
                   <input
                     type="file"
@@ -184,11 +203,11 @@ export default function QuestionarioPage() {
                     }}
                   />
                 </label>
-                {billNote ? <p className="text-xs text-emerald-300">{billNote}</p> : null}
+                {billNote ? <p className="text-xs font-medium text-supaste-blue">{billNote}</p> : null}
               </div>
 
-              <div className="grid sm:grid-cols-2 gap-3">
-                <label className="flex flex-col text-sm gap-1">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <label className="flex flex-col gap-1.5 text-sm font-medium">
                   Consumo
                   <input
                     type="number"
@@ -198,7 +217,7 @@ export default function QuestionarioPage() {
                     className={inputClass}
                   />
                 </label>
-                <label className="flex flex-col text-sm gap-1">
+                <label className="flex flex-col gap-1.5 text-sm font-medium">
                   Período
                   <select
                     value={q.consumption_period}
@@ -210,7 +229,7 @@ export default function QuestionarioPage() {
                   </select>
                 </label>
               </div>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-supaste-muted">
                 Dica: numa habitação típica em Portugal, o consumo anual ronda 2500–5000 kWh.
               </p>
             </div>
@@ -218,8 +237,8 @@ export default function QuestionarioPage() {
 
           {/* Step 1 — Localização e telhado */}
           {step === 1 ? (
-            <div className="space-y-3">
-              <label className="flex flex-col text-sm gap-1">
+            <div className="space-y-4">
+              <label className="flex flex-col gap-1.5 text-sm font-medium">
                 Região
                 <select
                   value={q.region}
@@ -234,20 +253,22 @@ export default function QuestionarioPage() {
                 </select>
               </label>
 
-              <div className="space-y-1">
-                <span className="text-sm">Onde fica a sua casa?</span>
+              <div className="space-y-1.5">
+                <span className="text-sm font-medium">Onde fica a sua casa?</span>
                 <LocationSearch onSelect={handleLocation} />
               </div>
 
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-supaste-muted">
                 Pesquise a morada, depois desenhe o contorno do telhado no mapa para calcular a área.
               </p>
-              <MapSolar onPolygonChange={handlePolygon} flyTo={flyTo} />
-              <div className="text-sm text-slate-300">
+              <div className="mapbox-supaste overflow-hidden rounded-[22px]">
+                <MapSolar onPolygonChange={handlePolygon} flyTo={flyTo} />
+              </div>
+              <div className="text-sm text-supaste-ink">
                 Área do telhado selecionada:{" "}
-                <span className="font-mono text-emerald-300">{q.available_area_m2.toFixed(1)} m²</span>
+                <span className="font-mono text-supaste-blue">{q.available_area_m2.toFixed(1)} m²</span>
                 {q.latitude && q.longitude ? (
-                  <span className="text-slate-500">
+                  <span className="text-supaste-muted">
                     {" "}
                     · {q.latitude.toFixed(4)}, {q.longitude.toFixed(4)}
                   </span>
@@ -258,63 +279,45 @@ export default function QuestionarioPage() {
 
           {/* Step 2 — Objetivo */}
           {step === 2 ? (
-            <div className="space-y-4">
-              <div className="space-y-1">
-                <span className="text-sm">Tipo de utilização</span>
+            <div className="space-y-5">
+              <div className="space-y-2">
+                <span className="text-sm font-medium">Tipo de utilização</span>
                 <div className="flex gap-2">
                   {(["habitacao", "empresa"] as const).map(t => (
-                    <button
-                      key={t}
-                      type="button"
-                      onClick={() => set("usage_type", t)}
-                      className={`px-4 py-1.5 rounded-lg text-sm font-semibold border ${
-                        q.usage_type === t
-                          ? "bg-emerald-500 text-slate-950 border-emerald-500"
-                          : "bg-slate-900 text-slate-300 border-slate-700"
-                      }`}
-                    >
+                    <button key={t} type="button" onClick={() => set("usage_type", t)} className={pill(q.usage_type === t)}>
                       {t === "habitacao" ? "Habitação" : "Empresa"}
                     </button>
                   ))}
                 </div>
               </div>
 
-              <div className="space-y-1">
-                <span className="text-sm">Autossuficiência pretendida</span>
+              <div className="space-y-2">
+                <span className="text-sm font-medium">Autossuficiência pretendida</span>
                 <div className="flex flex-wrap gap-2">
                   {COVERAGES.map(c => (
-                    <button
-                      key={c}
-                      type="button"
-                      onClick={() => set("coverage", c)}
-                      className={`px-4 py-1.5 rounded-lg text-sm font-semibold border ${
-                        q.coverage === c
-                          ? "bg-emerald-500 text-slate-950 border-emerald-500"
-                          : "bg-slate-900 text-slate-300 border-slate-700"
-                      }`}
-                    >
+                    <button key={c} type="button" onClick={() => set("coverage", c)} className={pill(q.coverage === c)}>
                       {(c * 100).toFixed(0)}%
                     </button>
                   ))}
                 </div>
               </div>
 
-              <div className="space-y-1">
-                <span className="text-sm">O que é mais importante para si?</span>
-                <div className="grid sm:grid-cols-3 gap-2">
+              <div className="space-y-2">
+                <span className="text-sm font-medium">O que é mais importante para si?</span>
+                <div className="grid gap-2 sm:grid-cols-3">
                   {PRIORITIES.map(p => (
                     <button
                       key={p.value}
                       type="button"
                       onClick={() => set("priority", p.value)}
-                      className={`rounded-lg p-3 text-left border ${
+                      className={`rounded-2xl border p-4 text-left transition-colors ${
                         q.priority === p.value
-                          ? "bg-emerald-500/10 border-emerald-500"
-                          : "bg-slate-900 border-slate-700"
+                          ? "border-supaste-blue bg-white shadow-soft-float"
+                          : "border-black/10 bg-supaste-section"
                       }`}
                     >
                       <div className="text-sm font-semibold">{p.label}</div>
-                      <div className="text-xs text-slate-400">{p.hint}</div>
+                      <div className="text-xs text-supaste-muted">{p.hint}</div>
                     </button>
                   ))}
                 </div>
@@ -324,8 +327,8 @@ export default function QuestionarioPage() {
 
           {/* Step 3 — Económico */}
           {step === 3 ? (
-            <div className="space-y-4">
-              <label className="flex flex-col text-sm gap-1">
+            <div className="space-y-5">
+              <label className="flex flex-col gap-1.5 text-sm font-medium">
                 Preço da eletricidade (€/kWh)
                 <input
                   type="number"
@@ -337,26 +340,28 @@ export default function QuestionarioPage() {
                 />
               </label>
 
-              <label className="flex items-center gap-2 text-sm">
+              <label className="flex items-center gap-2.5 text-sm">
                 <input
                   type="checkbox"
                   checked={q.has_social_tariff}
                   onChange={e => set("has_social_tariff", e.target.checked)}
+                  className="h-4 w-4 accent-supaste-blue"
                 />
                 Tenho Tarifa Social de Energia
               </label>
 
-              <label className="flex items-center gap-2 text-sm">
+              <label className="flex items-center gap-2.5 text-sm">
                 <input
                   type="checkbox"
                   checked={q.wants_battery}
                   onChange={e => set("wants_battery", e.target.checked)}
+                  className="h-4 w-4 accent-supaste-blue"
                 />
                 Pretendo incluir bateria
               </label>
 
               {q.wants_battery ? (
-                <label className="flex flex-col text-sm gap-1">
+                <label className="flex flex-col gap-1.5 text-sm font-medium">
                   Custo estimado da bateria (€)
                   <input
                     type="number"
@@ -369,7 +374,9 @@ export default function QuestionarioPage() {
                 </label>
               ) : null}
 
-              {error ? <div className="text-sm text-red-300">{error}</div> : null}
+              {error ? (
+                <div className="rounded-2xl bg-[#fdecec] px-4 py-3 text-sm text-[#b42318]">{error}</div>
+              ) : null}
             </div>
           ) : null}
         </section>
@@ -379,7 +386,7 @@ export default function QuestionarioPage() {
             type="button"
             onClick={() => setStep(s => Math.max(0, s - 1))}
             disabled={step === 0}
-            className="px-4 py-2 rounded-lg text-sm font-semibold text-slate-300 bg-slate-800 border border-slate-700 disabled:opacity-40"
+            className="rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-supaste-ink shadow-soft-float disabled:opacity-40"
           >
             Anterior
           </button>
@@ -389,7 +396,7 @@ export default function QuestionarioPage() {
               type="button"
               onClick={() => setStep(s => Math.min(STEPS.length - 1, s + 1))}
               disabled={!canNext}
-              className="px-5 py-2 rounded-lg text-sm font-semibold text-slate-950 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50"
+              className="supaste-button rounded-full bg-supaste-black px-6 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
             >
               Seguinte
             </button>
@@ -398,7 +405,7 @@ export default function QuestionarioPage() {
               type="button"
               onClick={submit}
               disabled={submitting}
-              className="px-5 py-2 rounded-lg text-sm font-semibold text-slate-950 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50"
+              className="supaste-button rounded-full bg-supaste-black px-6 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
             >
               {submitting ? "A calcular…" : "Calcular propostas ideais"}
             </button>

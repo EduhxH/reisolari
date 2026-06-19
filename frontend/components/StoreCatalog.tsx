@@ -1,22 +1,20 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { Minus, PackageCheck, Plus, Search, SlidersHorizontal, Trash2 } from "lucide-react";
 import { fetchProducts, formatPrice, type Product } from "@/lib/api";
 import { useCart } from "@/lib/cart";
 import PanelGraphic from "@/components/PanelGraphic";
+import { RevealStagger, RevealItem } from "@/components/Reveal";
 
-const CATEGORIES = [
-  "Custo-benefício",
-  "Alta eficiência",
-  "Premium europeu",
-  "Premium"
-];
+const CATEGORIES = ["Custo-benefício", "Alta eficiência", "Premium europeu", "Premium"];
 
 const SORT_OPTIONS: { value: string; label: string }[] = [
-  { value: "price_asc", label: "Preço ↑" },
-  { value: "price_desc", label: "Preço ↓" },
-  { value: "power_desc", label: "Potência" },
-  { value: "efficiency_desc", label: "Eficiência" }
+  { value: "price_asc", label: "Preço crescente" },
+  { value: "price_desc", label: "Preço decrescente" },
+  { value: "power_desc", label: "Maior potência" },
+  { value: "efficiency_desc", label: "Maior eficiência" }
 ];
 
 const formatEfficiency = (efficiency: number) =>
@@ -28,70 +26,65 @@ function ProductCard({ product }: { product: Product }) {
   const soldOut = product.stock <= 0;
 
   return (
-    <article className="rounded-lg border border-slate-800 bg-card overflow-hidden flex flex-col transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-emerald-950/20">
-      <div className="aspect-[4/3] bg-gradient-to-br from-slate-900 to-slate-950 relative grid place-items-center p-4">
-        <PanelGraphic
-          widthMm={product.width_mm}
-          heightMm={product.height_mm}
-          cellCount={product.cell_count}
-          powerW={product.power_w}
-          className="h-full w-auto max-h-44 drop-shadow-lg"
-        />
-        <span className="absolute top-2 left-2 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+    <article className="supaste-glass-strong group flex min-h-[480px] flex-col overflow-hidden rounded-[28px] transition-transform duration-400 ease-in-out hover:-translate-y-1">
+      <Link
+        href={`/loja/${product.slug}`}
+        className="relative grid aspect-[4/3] place-items-center bg-[linear-gradient(145deg,#f7f7f7,#ffffff)] p-5"
+      >
+        {product.image_url ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={product.image_url}
+            alt={product.name}
+            referrerPolicy="no-referrer"
+            className="h-full max-h-48 w-auto object-contain transition-transform duration-500 group-hover:scale-[1.03]"
+          />
+        ) : (
+          <PanelGraphic
+            widthMm={product.width_mm}
+            heightMm={product.height_mm}
+            cellCount={product.cell_count}
+            powerW={product.power_w}
+            className="h-full max-h-48 w-auto drop-shadow-2xl transition-transform duration-500 group-hover:scale-[1.03]"
+          />
+        )}
+        <span className="absolute left-4 top-4 rounded-full border border-black/10 bg-white/80 px-3 py-1 text-[10px] font-bold text-supaste-blue backdrop-blur">
           {product.category}
         </span>
-        <span className="absolute top-2 right-2 px-2 py-0.5 rounded text-[10px] font-bold bg-slate-950/80 text-amber-300 border border-amber-500/30">
+        <span className="absolute right-4 top-4 rounded-full bg-supaste-black px-3 py-1 text-[10px] font-bold text-white">
           {product.power_w} W
         </span>
-      </div>
+      </Link>
 
-      <div className="p-4 space-y-3 flex flex-col flex-1">
-        <div className="space-y-1">
-          <p className="text-[10px] uppercase tracking-wide text-slate-500 font-semibold">
-            {product.brand}
-          </p>
-          <h3 className="font-semibold text-slate-100 leading-snug line-clamp-2 min-h-[2.5rem]">
+      <div className="flex flex-1 flex-col p-5">
+        <div>
+          <p className="font-mono text-[10px] uppercase text-supaste-muted">{product.brand}</p>
+          <Link
+            href={`/loja/${product.slug}`}
+            className="mt-2 block min-h-[3rem] text-lg font-bold leading-snug tracking-[-0.03em] text-supaste-black transition-colors hover:text-supaste-blue"
+          >
             {product.name}
-          </h3>
+          </Link>
         </div>
 
-        <div className="grid grid-cols-3 gap-1 text-center">
-          <div className="bg-slate-900/60 rounded p-1.5">
-            <p className="text-[9px] text-slate-500 uppercase">Eficiência</p>
-            <p className="text-xs font-bold text-slate-200">
-              {formatEfficiency(product.efficiency)}
-            </p>
-          </div>
-          <div className="bg-slate-900/60 rounded p-1.5">
-            <p className="text-[9px] text-slate-500 uppercase">Potência</p>
-            <p className="text-xs font-bold text-slate-200">{product.power_w} W</p>
-          </div>
-          <div className="bg-slate-900/60 rounded p-1.5">
-            <p className="text-[9px] text-slate-500 uppercase">Garantia</p>
-            <p className="text-xs font-bold text-slate-200">
-              {product.warranty_product_years} a
-            </p>
-          </div>
+        <div className="mt-4 grid grid-cols-3 gap-2 text-center">
+          <Metric label="Eficiencia" value={formatEfficiency(product.efficiency)} />
+          <Metric label="Potencia" value={`${product.power_w} W`} />
+          <Metric label="Garantia" value={`${product.warranty_product_years} a`} />
         </div>
 
-        <p className="text-xs text-slate-400 line-clamp-3 leading-relaxed flex-1">
+        <p className="mt-4 line-clamp-3 flex-1 text-sm leading-6 text-supaste-muted">
           {product.description}
         </p>
 
-        <div className="flex items-end justify-between pt-1">
+        <div className="mt-5 flex items-end justify-between gap-4">
           <div>
-            <p className="text-lg font-bold text-emerald-400 leading-none">
+            <p className="text-2xl font-bold tracking-[-0.04em] text-supaste-black">
               {formatPrice(product.price_cents, product.currency)}
             </p>
-            <p className="text-[10px] text-slate-500 mt-0.5">
-              s/ IVA · unidade
-            </p>
+            <p className="mt-1 text-[11px] text-supaste-muted">sem IVA · unidade</p>
           </div>
-          <p
-            className={`text-[10px] font-medium ${
-              soldOut ? "text-red-400" : "text-slate-400"
-            }`}
-          >
+          <p className={`text-xs font-semibold ${soldOut ? "text-red-600" : "text-supaste-green"}`}>
             {soldOut ? "Esgotado" : `${product.stock} em stock`}
           </p>
         </div>
@@ -99,49 +92,57 @@ function ProductCard({ product }: { product: Product }) {
         {soldOut ? (
           <button
             disabled
-            className="w-full rounded-lg py-2 text-sm font-semibold bg-slate-800 text-slate-500 cursor-not-allowed"
+            className="mt-5 min-h-[44px] w-full rounded-full bg-black/8 text-sm font-semibold text-supaste-muted"
           >
             Esgotado
           </button>
         ) : inCart === 0 ? (
           <button
             onClick={() => addItem(product)}
-            className="w-full rounded-lg py-2 text-sm font-semibold bg-emerald-500 hover:bg-emerald-400 text-slate-950 transition-colors"
+            className="supaste-button mt-5 min-h-[44px] w-full rounded-full bg-supaste-black text-sm font-semibold text-white"
           >
             Adicionar ao carrinho
           </button>
         ) : (
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center border border-slate-700 rounded-lg flex-1 justify-between">
+          <div className="mt-5 flex items-center gap-2">
+            <div className="flex min-h-[44px] flex-1 items-center justify-between rounded-full border border-black/10 bg-white px-2">
               <button
                 onClick={() => setQuantity(product.id, inCart - 1)}
-                className="px-3 py-1.5 text-slate-300 hover:text-white"
+                className="grid h-9 w-9 place-items-center rounded-full text-supaste-muted transition-colors duration-300 hover:bg-[#f5f5f7] hover:text-supaste-black"
                 aria-label="Diminuir"
               >
-                −
+                <Minus className="h-4 w-4" />
               </button>
-              <span className="text-sm font-mono text-emerald-400 font-semibold">
-                {inCart}
-              </span>
+              <span className="font-mono text-sm font-semibold text-supaste-blue">{inCart}</span>
               <button
                 onClick={() => addItem(product, 1)}
                 disabled={inCart >= product.stock}
-                className="px-3 py-1.5 text-slate-300 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed"
+                className="grid h-9 w-9 place-items-center rounded-full text-supaste-muted transition-colors duration-300 hover:bg-[#f5f5f7] hover:text-supaste-black disabled:opacity-30"
                 aria-label="Aumentar"
               >
-                +
+                <Plus className="h-4 w-4" />
               </button>
             </div>
             <button
               onClick={() => removeItem(product.id)}
-              className="text-[11px] text-slate-500 hover:text-red-400 px-1"
+              className="grid h-11 w-11 place-items-center rounded-full border border-black/10 bg-white text-supaste-muted transition-colors duration-300 hover:border-red-200 hover:text-red-600"
+              aria-label="Remover"
             >
-              remover
+              <Trash2 className="h-4 w-4" />
             </button>
           </div>
         )}
       </div>
     </article>
+  );
+}
+
+function Metric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-2xl bg-[#f5f5f7] p-2">
+      <p className="text-[9px] uppercase text-supaste-muted">{label}</p>
+      <p className="mt-1 text-xs font-bold text-supaste-black">{value}</p>
+    </div>
   );
 }
 
@@ -153,9 +154,8 @@ export default function StoreCatalog() {
   const [category, setCategory] = useState("");
   const [sort, setSort] = useState("price_asc");
   const [inStockOnly, setInStockOnly] = useState(false);
-
-  // Debounce the free-text search to avoid a request per keystroke.
   const [debouncedSearch, setDebouncedSearch] = useState("");
+
   useEffect(() => {
     const handle = setTimeout(() => setDebouncedSearch(search), 300);
     return () => clearTimeout(handle);
@@ -175,8 +175,7 @@ export default function StoreCatalog() {
         });
         if (!cancelled) setProducts(data);
       } catch {
-        if (!cancelled)
-          setError("Não foi possível carregar o catálogo da loja.");
+        if (!cancelled) setError("Nao foi possivel carregar o catalogo da loja.");
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -188,30 +187,39 @@ export default function StoreCatalog() {
   }, [debouncedSearch, category, sort, inStockOnly]);
 
   const resultLabel = useMemo(() => {
-    if (loading) return "A carregar...";
-    return `${products.length} ${products.length === 1 ? "painel" : "painéis"}`;
+    if (loading) return "A carregar";
+    return `${products.length} ${products.length === 1 ? "painel" : "paineis"}`;
   }, [loading, products.length]);
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex items-center gap-2">
-          <h2 className="text-lg font-semibold text-slate-200">
-            Painéis solares novos
-          </h2>
-          <span className="text-xs text-slate-500">· {resultLabel}</span>
+    <div className="space-y-5">
+      <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+        <div>
+          <p className="font-mono text-xs uppercase text-supaste-blue">Loja Reisolari</p>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <h2 className="font-display text-3xl font-bold tracking-[-0.04em] text-supaste-black">
+              Paineis solares novos
+            </h2>
+            <span className="rounded-full bg-[#f5f5f7] px-3 py-1 text-xs font-semibold text-supaste-muted">
+              {resultLabel}
+            </span>
+          </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <input
-            value={search}
-            onChange={event => setSearch(event.target.value)}
-            placeholder="Procurar marca ou modelo..."
-            className="bg-slate-900 border border-slate-800 rounded-md px-3 py-1.5 text-xs text-slate-200 outline-none focus:border-emerald-600 w-44"
-          />
+
+        <div className="supaste-glass-strong flex flex-col gap-2 rounded-[26px] p-2 lg:flex-row lg:items-center">
+          <label className="relative min-w-0 lg:w-56">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-supaste-muted" />
+            <input
+              value={search}
+              onChange={event => setSearch(event.target.value)}
+              placeholder="Procurar marca"
+              className="w-full rounded-full border border-transparent bg-white px-9 py-2.5 text-xs font-medium text-supaste-black outline-none transition-colors duration-300 focus:border-supaste-blue"
+            />
+          </label>
           <select
             value={category}
             onChange={event => setCategory(event.target.value)}
-            className="bg-slate-900 border border-slate-800 rounded-md px-3 py-1.5 text-xs text-slate-200 outline-none cursor-pointer"
+            className="rounded-full border border-transparent bg-white px-4 py-2.5 text-xs font-semibold text-supaste-black outline-none transition-colors duration-300 focus:border-supaste-blue"
           >
             <option value="">Todas as gamas</option>
             {CATEGORIES.map(cat => (
@@ -223,7 +231,7 @@ export default function StoreCatalog() {
           <select
             value={sort}
             onChange={event => setSort(event.target.value)}
-            className="bg-slate-900 border border-slate-800 rounded-md px-3 py-1.5 text-xs text-slate-200 outline-none cursor-pointer"
+            className="rounded-full border border-transparent bg-white px-4 py-2.5 text-xs font-semibold text-supaste-black outline-none transition-colors duration-300 focus:border-supaste-blue"
           >
             {SORT_OPTIONS.map(option => (
               <option key={option.value} value={option.value}>
@@ -231,31 +239,53 @@ export default function StoreCatalog() {
               </option>
             ))}
           </select>
-          <label className="flex items-center gap-1.5 text-xs text-slate-300 bg-slate-900 border border-slate-800 rounded-md px-3 py-1.5 cursor-pointer">
+          <label className="flex items-center gap-2 rounded-full bg-white px-4 py-2.5 text-xs font-semibold text-supaste-black">
             <input
               type="checkbox"
               checked={inStockOnly}
               onChange={event => setInStockOnly(event.target.checked)}
-              className="accent-emerald-500"
+              className="accent-supaste-blue"
             />
             Em stock
           </label>
         </div>
       </div>
 
-      {error ? <div className="text-sm text-red-300">{error}</div> : null}
+      {error ? (
+        <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+          {error}
+        </div>
+      ) : null}
 
       {!loading && products.length === 0 && !error ? (
-        <div className="text-sm text-slate-400 py-12 text-center border border-dashed border-slate-800 rounded-lg">
-          Nenhum painel corresponde aos filtros selecionados.
+        <div className="supaste-glass-strong grid min-h-[220px] place-items-center rounded-[28px] text-center">
+          <div>
+            <SlidersHorizontal className="mx-auto h-8 w-8 text-supaste-muted" />
+            <p className="mt-3 text-sm font-semibold text-supaste-black">
+              Nenhum painel corresponde aos filtros.
+            </p>
+          </div>
+        </div>
+      ) : loading ? (
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <div key={index} className="h-[480px] animate-pulse rounded-[28px] bg-black/5" />
+          ))}
         </div>
       ) : (
-        <section className="grid sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
+        <RevealStagger className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
           {products.map(product => (
-            <ProductCard key={product.id} product={product} />
+            <RevealItem key={product.id}>
+              <ProductCard product={product} />
+            </RevealItem>
           ))}
-        </section>
+        </RevealStagger>
       )}
+
+      <div className="flex items-center gap-2 text-xs font-medium text-supaste-muted">
+        <PackageCheck className="h-4 w-4" />
+        Stock e preços atualizados em tempo real. Pagamento seguro à saída.
+      </div>
     </div>
   );
 }

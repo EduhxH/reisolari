@@ -68,31 +68,31 @@ const SECTIONS: { title: string; body: string; items: string[] }[] = [
 
 export default function DiretrizesPage() {
   return (
-    <main className="min-h-screen bg-bg text-slate-100 p-6">
+    <main className="min-h-screen bg-supaste-mist text-supaste-ink p-6">
       <div className="max-w-3xl mx-auto space-y-6">
-        <header className="flex items-center justify-between border-b border-slate-800 pb-4">
+        <header className="flex items-center justify-between border-b border-black/10 pb-4">
           <div>
-            <h1 className="text-2xl font-bold text-white">Diretrizes de Segurança</h1>
-            <p className="text-sm text-slate-400">
+            <h1 className="text-2xl font-bold text-supaste-ink">Diretrizes de Segurança</h1>
+            <p className="text-sm text-supaste-muted">
               Como comprar e vender em segurança na Reisolari e evitar burlas.
             </p>
           </div>
-          <Link href="/marketplace" className="text-xs font-semibold text-slate-300 hover:text-emerald-300">
+          <Link href="/marketplace" className="text-xs font-semibold text-supaste-muted hover:text-supaste-blue">
             ← Marketplace
           </Link>
         </header>
 
-        <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-4 text-sm text-emerald-200">
+        <div className="rounded-lg border border-supaste-green/30 bg-supaste-black/5 p-4 text-sm text-supaste-blue">
           🔒 Regra de ouro: <strong>mantenha tudo dentro da Reisolari</strong>. Conversas e
           pagamentos fora da plataforma não podem ser protegidos por nós.
         </div>
 
         <div className="space-y-5">
           {SECTIONS.map(section => (
-            <section key={section.title} className="rounded-xl border border-slate-800 bg-card p-5 space-y-2">
-              <h2 className="text-base font-semibold text-white">{section.title}</h2>
-              <p className="text-sm text-slate-400">{section.body}</p>
-              <ul className="list-disc pl-5 space-y-1 text-sm text-slate-300">
+            <section key={section.title} className="rounded-xl border border-black/10 bg-white p-5 space-y-2">
+              <h2 className="text-base font-semibold text-supaste-ink">{section.title}</h2>
+              <p className="text-sm text-supaste-muted">{section.body}</p>
+              <ul className="list-disc pl-5 space-y-1 text-sm text-supaste-muted">
                 {section.items.map(item => (
                   <li key={item}>{item}</li>
                 ))}
@@ -101,7 +101,7 @@ export default function DiretrizesPage() {
           ))}
         </div>
 
-        <p className="text-[11px] text-slate-500">
+        <p className="text-[11px] text-supaste-muted">
           Encontrou um comportamento suspeito? Termine a conversa e evite qualquer pagamento.
           Estas diretrizes existem para o proteger — ao usar a Reisolari, concorda em segui-las.
         </p>

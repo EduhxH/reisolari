@@ -1,19 +1,33 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { useCart } from "@/lib/cart";
-import { useAuth } from "@/lib/auth";
-import CartDrawer from "@/components/CartDrawer";
-import StoreCatalog from "@/components/StoreCatalog";
-import AuthHeaderButtons from "@/components/AuthHeaderButtons";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  ArrowLeft,
+  BadgeCheck,
+  ExternalLink,
+  Heart,
+  MessageCircle,
+  Search,
+  ShoppingCart,
+  SlidersHorizontal,
+  Store,
+  UserRound
+} from "lucide-react";
 import AnunciarButton from "@/components/AnunciarButton";
+import AuthHeaderButtons from "@/components/AuthHeaderButtons";
+import CartDrawer from "@/components/CartDrawer";
 import NotificationsBell from "@/components/NotificationsBell";
-import { createRoom, sendMessage } from "@/lib/chat";
+import StoreCatalog from "@/components/StoreCatalog";
 import { addFavorite, getFavoriteIds, removeFavorite } from "@/lib/favorites";
-import { fetchCategoryTree, type CategoryNode } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
+import { useCart } from "@/lib/cart";
+import { createRoom, sendMessage } from "@/lib/chat";
+import { backendUrl, fetchCategoryTree, type CategoryNode } from "@/lib/api";
 import { getProfilesSummary, type ProfileSummary } from "@/lib/profile";
 
 type Listing = {
@@ -46,20 +60,26 @@ type OLXAd = {
   created_at: string;
 };
 
+type Tab = "store" | "internal" | "olx";
+
 const conditionLabels: Record<Listing["condition"], string> = {
   novo: "Novo",
   usado_como_novo: "Como novo",
   usado_sinais: "Usado",
-  pecas: "Para peças"
+  pecas: "Para pecas"
 };
 
-const formatPrice = (cents: number, currency: string) =>
+const tabs: { id: Tab; label: string; hint: string }[] = [
+  { id: "store", label: "Loja Reisolari", hint: "Envio para todo o país" },
+  { id: "internal", label: "Particulares", hint: "Compra e venda entre pessoas" },
+  { id: "olx", label: "Usados no OLX", hint: "Anúncios na sua região" }
+];
+
+const formatListingPrice = (cents: number, currency: string) =>
   new Intl.NumberFormat("pt-PT", {
     style: "currency",
     currency: currency.toUpperCase()
   }).format(cents / 100);
-
-type Tab = "store" | "internal" | "olx";
 
 export default function MarketplacePage() {
   const { count, isHydrated } = useCart();
@@ -70,7 +90,6 @@ export default function MarketplacePage() {
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
   const [actionBusy, setActionBusy] = useState<string | null>(null);
 
-  // Internal listings state
   const [listings, setListings] = useState<Listing[]>([]);
   const [condition, setCondition] = useState("");
   const [search, setSearch] = useState("");
@@ -81,34 +100,22 @@ export default function MarketplacePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // OLX listings state
   const [olxListings, setOlxListings] = useState<OLXAd[]>([]);
   const [olxLoading, setOlxLoading] = useState(false);
   const [olxError, setOlxError] = useState<string | null>(null);
   const [searchDistrict, setSearchDistrict] = useState("Portugal");
-
-  // Location coordinates from localStorage
   const [coords, setCoords] = useState<{ lat: number; lon: number } | null>(null);
 
-  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL?.replace(/\/$/, "") ?? "";
-
-  // Retrieve coordinates on mount
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const latStr = localStorage.getItem("reisolari_lat");
-      const lonStr = localStorage.getItem("reisolari_lon");
-      if (latStr && lonStr) {
-        setCoords({ lat: parseFloat(latStr), lon: parseFloat(lonStr) });
-      }
-    }
+    const latStr = localStorage.getItem("reisolari_lat");
+    const lonStr = localStorage.getItem("reisolari_lon");
+    if (latStr && lonStr) setCoords({ lat: parseFloat(latStr), lon: parseFloat(lonStr) });
   }, []);
 
-  // Taxonomy for the category filter.
   useEffect(() => {
     fetchCategoryTree().then(setTree).catch(() => setTree([]));
   }, []);
 
-  // Fetch internal listings (debounced) whenever search/filters/sort change.
   useEffect(() => {
     const handle = setTimeout(() => {
       const params: Record<string, any> = { sort };
@@ -118,22 +125,20 @@ export default function MarketplacePage() {
       setLoading(true);
       setError(null);
       axios
-        .get(`${backendUrl || ""}/api/v1/listings/`, { params })
+        .get(`${backendUrl}/api/v1/listings/`, { params })
         .then(response => setListings(response.data))
-        .catch(() => setError("Não foi possível carregar os anúncios do mercado interno."))
+        .catch(() => setError("Nao foi possivel carregar os anuncios do mercado interno."))
         .finally(() => setLoading(false));
     }, 350);
     return () => clearTimeout(handle);
-  }, [backendUrl, condition, categoryFilter, sort, search]);
+  }, [condition, categoryFilter, sort, search]);
 
-  // Seller reputation for the visible listings (batched).
   useEffect(() => {
     const owners = Array.from(new Set(listings.map(item => item.owner_id))).filter(Boolean);
     if (owners.length === 0) return;
     getProfilesSummary(owners).then(setSellerSummaries).catch(() => undefined);
   }, [listings]);
 
-  // Load which listings this user has favorited (for the heart state).
   useEffect(() => {
     if (!user) {
       setFavoriteIds(new Set());
@@ -150,6 +155,28 @@ export default function MarketplacePage() {
       cancelled = true;
     };
   }, [user]);
+
+  useEffect(() => {
+    const loadOlxListings = async () => {
+      setOlxLoading(true);
+      setOlxError(null);
+      try {
+        const params: Record<string, any> = {};
+        if (coords) {
+          params.latitude = coords.lat;
+          params.longitude = coords.lon;
+        }
+        const response = await axios.get(`${backendUrl}/api/v1/listings/olx`, { params });
+        setOlxListings(response.data.ads || []);
+        setSearchDistrict(response.data.district || "Portugal");
+      } catch {
+        setOlxError("Nao foi possivel carregar os anuncios do OLX.");
+      } finally {
+        setOlxLoading(false);
+      }
+    };
+    loadOlxListings();
+  }, [coords]);
 
   const toggleFavorite = async (listing: Listing) => {
     if (!user) {
@@ -169,7 +196,9 @@ export default function MarketplacePage() {
         return next;
       });
       setListings(prev =>
-        prev.map(l => (l.id === listing.id ? { ...l, favorites_count: result.count } : l))
+        prev.map(item =>
+          item.id === listing.id ? { ...item, favorites_count: result.count } : item
+        )
       );
     } catch {
       // ignore transient errors
@@ -189,342 +218,418 @@ export default function MarketplacePage() {
         await sendMessage(
           token,
           room.id,
-          `Olá! Tenho interesse em comprar "${listing.title}". Ainda está disponível?`
+          `Ola! Tenho interesse em comprar "${listing.title}". Ainda esta disponivel?`
         );
       }
       router.push(`/mensagens?room=${room.id}`);
     } catch (err: any) {
-      setError(err?.response?.data?.detail || "Não foi possível abrir a conversa.");
+      setError(err?.response?.data?.detail || "Nao foi possivel abrir a conversa.");
     } finally {
       setActionBusy(null);
     }
   };
 
-  // Fetch OLX listings
-  useEffect(() => {
-    const loadOlxListings = async () => {
-      setOlxLoading(true);
-      setOlxError(null);
-      try {
-        const params: Record<string, any> = {};
-        if (coords) {
-          params.latitude = coords.lat;
-          params.longitude = coords.lon;
-        }
-        const response = await axios.get(`${backendUrl || ""}/api/v1/listings/olx`, { params });
-        setOlxListings(response.data.ads || []);
-        setSearchDistrict(response.data.district || "Portugal");
-      } catch {
-        setOlxError("Não foi possível carregar os anúncios do OLX.");
-      } finally {
-        setOlxLoading(false);
-      }
-    };
-
-    loadOlxListings();
-  }, [backendUrl, coords]);
-
-  const tabs: { id: Tab; label: string }[] = [
-    { id: "store", label: "Loja Reisolari" },
-    { id: "internal", label: "Mercado P2P" },
-    { id: "olx", label: "Usados no OLX" }
-  ];
-
   return (
-    <main className="min-h-screen bg-bg text-slate-100 p-6 space-y-6">
-      <header className="flex flex-col gap-4 border-b border-slate-800 pb-4">
-        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-white">Marketplace solar</h1>
-            <p className="text-sm text-slate-400">Compre painéis solares novos com carrinho e checkout, ou explore o mercado P2P e anúncios do OLX.</p>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <AnunciarButton />
-            {user ? <NotificationsBell /> : null}
-            {user ? (
-              <Link
-                href="/conta"
-                className="px-3 py-2 rounded-lg text-xs font-semibold text-slate-300 bg-slate-900 border border-slate-800 hover:border-emerald-700 hover:text-emerald-300 transition-colors"
-              >
-                A minha conta
-              </Link>
-            ) : null}
-            <AuthHeaderButtons />
-            <Link
-              href="/"
-              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold text-slate-300 bg-slate-900 border border-slate-800 hover:border-emerald-700 hover:text-emerald-300 transition-colors"
-            >
-              ← Voltar para simulador
+    <main className="min-h-screen bg-white text-supaste-ink">
+      <header className="sticky top-0 z-40 border-b border-black/5 bg-white/80 backdrop-blur-xl">
+        <div className="mx-auto max-w-[1320px] px-5">
+          {/* Row 1 — brand + actions */}
+          <div className="flex items-center justify-between gap-4 py-3">
+            <Link href="/" className="flex items-center gap-2.5">
+              <Image src="/images/reisolari-logo.jpeg" alt="Reisolari" width={34} height={34} className="rounded-full" />
+              <span className="flex flex-col leading-none">
+                <span className="font-display text-base font-semibold tracking-tight text-supaste-ink">Reisolari</span>
+                <span className="text-[10px] font-medium uppercase tracking-wide text-supaste-muted">Marketplace</span>
+              </span>
             </Link>
-            <button
-              onClick={() => setCartOpen(true)}
-              className="relative flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold text-slate-950 bg-emerald-500 hover:bg-emerald-400 transition-colors"
-              aria-label="Abrir carrinho"
-            >
-              🛒 Carrinho
-              {isHydrated && count > 0 ? (
-                <span className="absolute -top-2 -right-2 min-w-[18px] h-[18px] px-1 grid place-items-center rounded-full bg-amber-400 text-slate-950 text-[10px] font-bold">
-                  {count}
-                </span>
-              ) : null}
-            </button>
-          </div>
-        </div>
 
-        {/* Tab Switcher */}
-        <div className="flex bg-slate-900 p-1 rounded-lg border border-slate-800 self-start">
-          {tabs.map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`px-4 py-1.5 rounded-md text-xs font-semibold transition-all ${
-                activeTab === tab.id
-                  ? "bg-slate-800 text-emerald-400 shadow-sm"
-                  : "text-slate-400 hover:text-slate-200"
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
+            <div className="flex items-center gap-2">
+              <AnunciarButton className="supaste-button hidden rounded-full bg-white px-4 py-2 text-xs font-semibold text-supaste-ink ring-1 ring-black/10 sm:inline-flex" />
+              {user ? <NotificationsBell /> : null}
+              <AuthHeaderButtons />
+              <Link
+                href="/dashboard"
+                className="supaste-button hidden items-center gap-1.5 rounded-full bg-white px-4 py-2 text-xs font-semibold text-supaste-ink ring-1 ring-black/10 md:inline-flex"
+              >
+                <ArrowLeft className="h-3.5 w-3.5" /> Simulador
+              </Link>
+              <button
+                onClick={() => setCartOpen(true)}
+                className="supaste-button relative flex items-center gap-2 rounded-full bg-supaste-black px-4 py-2 text-xs font-semibold text-white"
+                aria-label="Abrir carrinho"
+              >
+                <ShoppingCart className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Carrinho</span>
+                {isHydrated && count > 0 ? (
+                  <span className="absolute -right-1 -top-1 grid h-5 min-w-[20px] place-items-center rounded-full bg-supaste-blue px-1 text-[10px] font-bold text-white">
+                    {count}
+                  </span>
+                ) : null}
+              </button>
+            </div>
+          </div>
+
+          {/* Row 2 — segmented tabs */}
+          <div className="flex gap-1.5 overflow-x-auto pb-3">
+            {tabs.map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                title={tab.hint}
+                className={`shrink-0 rounded-full px-4 py-2 text-sm font-semibold transition-colors ${
+                  activeTab === tab.id
+                    ? "bg-supaste-black text-white"
+                    : "bg-supaste-section text-supaste-ink hover:bg-[#ececef]"
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
         </div>
       </header>
 
-      {activeTab === "store" ? (
-        <StoreCatalog />
-      ) : activeTab === "internal" ? (
-        <div className="space-y-4">
-          <div className="space-y-3">
-            <h2 className="text-lg font-semibold text-slate-200">Painéis de Vendedores Reisolari</h2>
-            <div className="flex flex-col sm:flex-row gap-2">
-              <input
-                value={search}
-                onChange={event => setSearch(event.target.value)}
-                placeholder="Pesquisar anúncios…"
-                className="flex-1 rounded-lg bg-slate-900 border border-slate-800 px-3 py-2 text-sm text-slate-100 outline-none focus:border-emerald-600"
-              />
-              <select
-                value={categoryFilter}
-                onChange={event => setCategoryFilter(event.target.value)}
-                className="rounded-lg bg-slate-900 border border-slate-800 px-3 py-2 text-xs text-slate-200 outline-none focus:border-emerald-600 cursor-pointer"
-              >
-                <option value="">Todas as categorias</option>
-                {tree.map(root => (
-                  <optgroup key={root.id} label={root.name}>
-                    {root.children.map(child => (
-                      <option key={child.id} value={child.id}>
-                        {child.name}
-                      </option>
-                    ))}
-                  </optgroup>
+      <section className="mx-auto max-w-[1320px] px-5 py-8">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={activeTab}
+            initial={{ opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+          >
+            {activeTab === "store" ? (
+          <StoreCatalog />
+        ) : activeTab === "internal" ? (
+          <div className="space-y-5">
+            <MarketplaceFilters
+              search={search}
+              setSearch={setSearch}
+              categoryFilter={categoryFilter}
+              setCategoryFilter={setCategoryFilter}
+              condition={condition}
+              setCondition={setCondition}
+              sort={sort}
+              setSort={setSort}
+              tree={tree}
+            />
+
+            {error ? (
+              <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+                {error}
+              </div>
+            ) : null}
+
+            {loading ? (
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                {Array.from({ length: 6 }).map((_, index) => (
+                  <div key={index} className="h-[360px] animate-pulse rounded-[28px] bg-black/5" />
                 ))}
-              </select>
-              <select
-                value={condition}
-                onChange={event => setCondition(event.target.value)}
-                className="rounded-lg bg-slate-900 border border-slate-800 px-3 py-2 text-xs text-slate-200 outline-none focus:border-emerald-600 cursor-pointer"
-              >
-                <option value="">Qualquer estado</option>
-                <option value="novo">Novo</option>
-                <option value="usado_como_novo">Como novo</option>
-                <option value="usado_sinais">Com sinais de uso</option>
-                <option value="pecas">Para peças</option>
-              </select>
-              <select
-                value={sort}
-                onChange={event => setSort(event.target.value)}
-                className="rounded-lg bg-slate-900 border border-slate-800 px-3 py-2 text-xs text-slate-200 outline-none focus:border-emerald-600 cursor-pointer"
-              >
-                <option value="recent">Mais recentes</option>
-                <option value="price_asc">Preço ↑</option>
-                <option value="price_desc">Preço ↓</option>
-              </select>
-            </div>
-          </div>
-
-          {loading ? <div className="text-sm text-slate-400">A carregar anúncios...</div> : null}
-          {error ? <div className="text-sm text-red-300">{error}</div> : null}
-
-          {!loading && listings.length === 0 ? (
-            <div className="text-sm text-slate-400 py-12 text-center border border-dashed border-slate-800 rounded-lg">
-              Nenhum anúncio disponível no mercado interno.
-            </div>
-          ) : (
-            <section className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
-              {listings.map(listing => (
-                <article key={listing.id} className="rounded-lg border border-slate-800 bg-card overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-emerald-950/10">
-                  <div className="aspect-[4/3] bg-slate-950 relative">
-                    {listing.image_urls[0] ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={listing.image_urls[0]} alt={listing.title} className="h-full w-full object-cover" />
-                    ) : (
-                      <div className="h-full w-full grid place-items-center text-xs text-slate-500">Sem imagem</div>
-                    )}
-                    <span className="absolute top-2 left-2 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                      {conditionLabels[listing.condition]}
-                    </span>
-                    {user && listing.owner_id === user.uid ? null : (
-                      <button
-                        onClick={() => toggleFavorite(listing)}
-                        className="absolute top-2 right-2 flex items-center gap-1 px-2 py-1 rounded-full bg-black/50 backdrop-blur hover:bg-black/70 transition-colors"
-                        aria-label="Adicionar aos favoritos"
-                      >
-                        <span aria-hidden>{favoriteIds.has(listing.id) ? "❤️" : "🤍"}</span>
-                        {listing.favorites_count > 0 ? (
-                          <span className="text-[10px] text-slate-200 font-semibold">{listing.favorites_count}</span>
-                        ) : null}
-                      </button>
-                    )}
-                  </div>
-                  <div className="p-4 space-y-2">
-                    <div className="flex items-start justify-between gap-3">
-                      <Link href={`/anuncio/${listing.id}`} className="font-semibold text-slate-100 leading-snug line-clamp-1 hover:text-emerald-300">
-                        {listing.title}
-                      </Link>
-                      <span className="text-sm text-emerald-400 font-bold whitespace-nowrap">
-                        {formatPrice(listing.price_cents, listing.currency)}
-                      </span>
-                    </div>
-                    <div className="text-[10px] text-slate-500 flex items-center gap-1.5">
-                      {listing.listing_type === "premium" ? (
-                        <span className="px-1.5 py-0.5 rounded bg-amber-400/20 text-amber-300 font-bold">Premium</span>
-                      ) : null}
-                      <span className="truncate">
-                        {listing.category_path?.length ? listing.category_path.join(" › ") : ""}
-                        {listing.city ? ` · ${listing.city}` : ""}
-                      </span>
-                      {listing.views_count > 0 ? (
-                        <span className="whitespace-nowrap text-slate-500">· 👁 {listing.views_count}</span>
-                      ) : null}
-                    </div>
-                    {sellerSummaries[listing.owner_id] ? (
-                      <Link
-                        href={`/perfil/${listing.owner_id}`}
-                        className="inline-flex items-center gap-1 text-[10px] text-slate-400 hover:text-emerald-300"
-                      >
-                        <span className="text-amber-400">★</span>
-                        {sellerSummaries[listing.owner_id].rating.count > 0
-                          ? `${sellerSummaries[listing.owner_id].rating.average.toFixed(1)} (${sellerSummaries[listing.owner_id].rating.count})`
-                          : "Novo vendedor"}
-                        <span className="text-slate-500">· {sellerSummaries[listing.owner_id].display_name}</span>
-                      </Link>
-                    ) : null}
-                    <p className="text-xs text-slate-300 line-clamp-2">{listing.description}</p>
-                    {user && listing.owner_id === user.uid ? (
-                      <p className="text-[10px] text-slate-500 pt-1">O seu anúncio</p>
-                    ) : (
-                      <div className="flex items-center gap-2 pt-1">
-                        <button
-                          onClick={() => openChat(listing, false)}
-                          disabled={actionBusy === listing.id}
-                          className="flex-1 px-2 py-1.5 rounded-lg text-xs font-semibold text-slate-200 bg-slate-800 border border-slate-700 hover:border-emerald-700 hover:text-emerald-300 disabled:opacity-50 transition-colors"
-                        >
-                          💬 Mensagem
-                        </button>
-                        <button
-                          onClick={() => openChat(listing, true)}
-                          disabled={actionBusy === listing.id}
-                          className="flex-1 px-2 py-1.5 rounded-lg text-xs font-semibold text-slate-950 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 transition-colors"
-                        >
-                          🛒 Comprar
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </article>
-              ))}
-            </section>
-          )}
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {/* Location status banner */}
-          <div className="p-3 rounded-lg bg-slate-900 border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <span className="text-emerald-400 text-sm">📍</span>
-              <span className="text-xs text-slate-300">
-                Região de busca OLX: <strong className="text-white">{searchDistrict}</strong>
-              </span>
-            </div>
-            {searchDistrict === "Portugal" ? (
-              <span className="text-[10px] text-slate-500 italic">
-                * Dica: Desenhe a sua casa no simulador para ver anúncios da sua região.
-              </span>
+              </div>
+            ) : listings.length === 0 ? (
+              <EmptyState title="Nenhum anuncio disponivel" body="Ajuste os filtros ou publique o primeiro produto solar." />
             ) : (
-              <span className="text-[10px] text-emerald-400/80 font-medium bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
-                Filtro regional ativo
-              </span>
+              <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                {listings.map(listing => (
+                  <ListingCard
+                    key={listing.id}
+                    listing={listing}
+                    isOwner={Boolean(user && listing.owner_id === user.uid)}
+                    favorite={favoriteIds.has(listing.id)}
+                    seller={sellerSummaries[listing.owner_id]}
+                    busy={actionBusy === listing.id}
+                    onFavorite={() => toggleFavorite(listing)}
+                    onMessage={() => openChat(listing, false)}
+                    onBuyIntent={() => openChat(listing, true)}
+                  />
+                ))}
+              </section>
             )}
           </div>
-
-          {olxLoading ? <div className="text-sm text-slate-400">A obter anúncios em tempo real do OLX...</div> : null}
-          {olxError ? <div className="text-sm text-red-300">{olxError}</div> : null}
-
-          {!olxLoading && olxListings.length === 0 ? (
-            <div className="text-sm text-slate-400 py-12 text-center border border-dashed border-slate-800 rounded-lg">
-              Nenhum painel solar usado foi encontrado no OLX nesta região.
+        ) : (
+          <div className="space-y-5">
+            <div className="supaste-glass-strong flex flex-col gap-3 rounded-[28px] p-5 md:flex-row md:items-center md:justify-between">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-supaste-muted">OLX Portugal</p>
+                <h2 className="mt-2 font-display text-2xl font-semibold tracking-tight text-supaste-black">
+                  Anúncios usados em {searchDistrict}
+                </h2>
+              </div>
+              <p className="max-w-lg text-sm leading-6 text-supaste-muted">
+                Faça o questionário para usarmos a sua localização e mostrar anúncios mais perto de si.
+              </p>
             </div>
-          ) : (
-            <section className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
-              {olxListings.map(ad => (
-                <a
-                  href={ad.url}
-                  key={ad.id}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="group block rounded-lg border border-slate-800 bg-card overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-emerald-950/20"
-                >
-                  <div className="aspect-[4/3] bg-slate-950 relative">
-                    {ad.image_url ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={ad.image_url}
-                        alt={ad.title}
-                        className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                      />
-                    ) : (
-                      <div className="h-full w-full grid place-items-center text-xs text-slate-500">Sem imagem</div>
-                    )}
-                    <span className="absolute top-2 left-2 px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                      OLX Portugal
-                    </span>
-                    <span className="absolute bottom-2 right-2 px-2 py-0.5 rounded text-[9px] bg-slate-950/80 text-slate-300 backdrop-blur-sm">
-                      {ad.location.split(",")[0]}
-                    </span>
-                  </div>
-                  <div className="p-4 space-y-2 flex flex-col justify-between h-[160px]">
-                    <div className="space-y-1">
-                      <div className="flex items-start justify-between gap-3">
-                        <h3 className="font-semibold text-slate-100 leading-snug line-clamp-1 text-sm group-hover:text-emerald-400 transition-colors">
-                          {ad.title}
-                        </h3>
-                        <span className="text-sm text-emerald-400 font-bold whitespace-nowrap">
-                          {ad.price_display}
-                        </span>
-                      </div>
-                      <p className="text-xs text-slate-400 line-clamp-3 leading-relaxed">
-                        {ad.description}
-                      </p>
-                    </div>
 
-                    {/* Seller name + location (real OLX data only) */}
-                    <div className="flex justify-between items-center text-xs border-t border-slate-800/80 pt-2.5 mt-auto">
-                      <span className="text-slate-300 font-medium truncate max-w-[150px]" title={ad.seller_name}>
-                        {ad.seller_name}
-                      </span>
-                      <span className="text-[10px] text-slate-500 truncate max-w-[120px]" title={ad.location}>
-                        {ad.location.split(",")[0]}
-                      </span>
-                    </div>
-                  </div>
-                </a>
-              ))}
-            </section>
-          )}
-        </div>
-      )}
+            {olxError ? (
+              <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+                {olxError}
+              </div>
+            ) : null}
+
+            {olxLoading ? (
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                {Array.from({ length: 6 }).map((_, index) => (
+                  <div key={index} className="h-[340px] animate-pulse rounded-[28px] bg-black/5" />
+                ))}
+              </div>
+            ) : olxListings.length === 0 ? (
+              <EmptyState title="Nenhum resultado OLX" body="Nao foram encontrados paineis solares usados nesta regiao." />
+            ) : (
+              <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                {olxListings.map(ad => (
+                  <OLXCard key={ad.id} ad={ad} />
+                ))}
+              </section>
+            )}
+          </div>
+            )}
+          </motion.div>
+        </AnimatePresence>
+      </section>
 
       <CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} />
     </main>
+  );
+}
+
+function MarketplaceFilters({
+  search,
+  setSearch,
+  categoryFilter,
+  setCategoryFilter,
+  condition,
+  setCondition,
+  sort,
+  setSort,
+  tree
+}: {
+  search: string;
+  setSearch: (value: string) => void;
+  categoryFilter: string;
+  setCategoryFilter: (value: string) => void;
+  condition: string;
+  setCondition: (value: string) => void;
+  sort: string;
+  setSort: (value: string) => void;
+  tree: CategoryNode[];
+}) {
+  return (
+    <div className="supaste-glass-strong flex flex-col gap-2 rounded-[28px] p-2 lg:flex-row lg:items-center">
+      <label className="relative flex-1">
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-supaste-muted" />
+        <input
+          value={search}
+          onChange={event => setSearch(event.target.value)}
+          placeholder="Pesquisar anuncios"
+          className="w-full rounded-full border border-transparent bg-white px-9 py-3 text-sm font-medium text-supaste-black outline-none transition-colors duration-300 focus:border-supaste-blue"
+        />
+      </label>
+      <select
+        value={categoryFilter}
+        onChange={event => setCategoryFilter(event.target.value)}
+        className="rounded-full border border-transparent bg-white px-4 py-3 text-sm font-semibold text-supaste-black outline-none transition-colors duration-300 focus:border-supaste-blue"
+      >
+        <option value="">Todas as categorias</option>
+        {tree.map(root => (
+          <optgroup key={root.id} label={root.name}>
+            {root.children.map(child => (
+              <option key={child.id} value={child.id}>
+                {child.name}
+              </option>
+            ))}
+          </optgroup>
+        ))}
+      </select>
+      <select
+        value={condition}
+        onChange={event => setCondition(event.target.value)}
+        className="rounded-full border border-transparent bg-white px-4 py-3 text-sm font-semibold text-supaste-black outline-none transition-colors duration-300 focus:border-supaste-blue"
+      >
+        <option value="">Qualquer estado</option>
+        <option value="novo">Novo</option>
+        <option value="usado_como_novo">Como novo</option>
+        <option value="usado_sinais">Com sinais de uso</option>
+        <option value="pecas">Para pecas</option>
+      </select>
+      <select
+        value={sort}
+        onChange={event => setSort(event.target.value)}
+        className="rounded-full border border-transparent bg-white px-4 py-3 text-sm font-semibold text-supaste-black outline-none transition-colors duration-300 focus:border-supaste-blue"
+      >
+        <option value="recent">Mais recentes</option>
+        <option value="price_asc">Preco crescente</option>
+        <option value="price_desc">Preco decrescente</option>
+      </select>
+    </div>
+  );
+}
+
+function ListingCard({
+  listing,
+  isOwner,
+  favorite,
+  seller,
+  busy,
+  onFavorite,
+  onMessage,
+  onBuyIntent
+}: {
+  listing: Listing;
+  isOwner: boolean;
+  favorite: boolean;
+  seller?: ProfileSummary;
+  busy: boolean;
+  onFavorite: () => void;
+  onMessage: () => void;
+  onBuyIntent: () => void;
+}) {
+  return (
+    <article className="supaste-glass-strong overflow-hidden rounded-[28px] transition-transform duration-400 ease-in-out hover:-translate-y-1">
+      <div className="relative aspect-[4/3] bg-[#f5f5f7]">
+        {listing.image_urls[0] ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={listing.image_urls[0]} alt={listing.title} className="h-full w-full object-cover" />
+        ) : (
+          <div className="grid h-full w-full place-items-center bg-[linear-gradient(135deg,#eef3ef,#ffffff)] text-supaste-muted">
+            <Store className="h-8 w-8" />
+          </div>
+        )}
+        <span className="absolute left-4 top-4 rounded-full bg-white/86 px-3 py-1 text-[10px] font-bold text-supaste-black backdrop-blur">
+          {conditionLabels[listing.condition]}
+        </span>
+        {listing.listing_type === "premium" ? (
+          <span className="absolute bottom-4 left-4 rounded-full bg-supaste-blue px-3 py-1 text-[10px] font-bold text-white">
+            Premium
+          </span>
+        ) : null}
+        {!isOwner ? (
+          <button
+            onClick={onFavorite}
+            className="absolute right-4 top-4 flex items-center gap-1 rounded-full bg-white/86 px-3 py-1 text-[10px] font-bold text-supaste-black backdrop-blur transition-colors duration-300 hover:text-red-600"
+            aria-label="Adicionar aos favoritos"
+          >
+            <Heart className={`h-3.5 w-3.5 ${favorite ? "fill-red-500 text-red-500" : ""}`} />
+            {listing.favorites_count > 0 ? listing.favorites_count : null}
+          </button>
+        ) : null}
+      </div>
+
+      <div className="p-5">
+        <div className="flex items-start justify-between gap-4">
+          <Link
+            href={`/anuncio/${listing.id}`}
+            className="line-clamp-2 text-lg font-bold leading-snug tracking-[-0.03em] text-supaste-black transition-colors duration-300 hover:text-supaste-blue"
+          >
+            {listing.title}
+          </Link>
+          <span className="shrink-0 text-lg font-bold text-supaste-black">
+            {formatListingPrice(listing.price_cents, listing.currency)}
+          </span>
+        </div>
+
+        <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] font-medium text-supaste-muted">
+          {listing.category_path?.length ? <span>{listing.category_path.join(" / ")}</span> : null}
+          {listing.city ? <span>{listing.city}</span> : null}
+          {listing.views_count > 0 ? <span>{listing.views_count} visualizacoes</span> : null}
+        </div>
+
+        <p className="mt-4 line-clamp-2 text-sm leading-6 text-supaste-muted">{listing.description}</p>
+
+        {seller ? (
+          <Link
+            href={`/perfil/${listing.owner_id}`}
+            className="mt-4 flex items-center gap-2 text-xs font-semibold text-supaste-muted transition-colors duration-300 hover:text-supaste-black"
+          >
+            <UserRound className="h-4 w-4" />
+            {seller.display_name}
+            {seller.rating.count > 0 ? (
+              <span className="rounded-full bg-[#f5f5f7] px-2 py-0.5">
+                {seller.rating.average.toFixed(1)} ({seller.rating.count})
+              </span>
+            ) : null}
+          </Link>
+        ) : null}
+
+        {isOwner ? (
+          <p className="mt-5 text-xs font-semibold text-supaste-muted">O seu anuncio</p>
+        ) : (
+          <div className="mt-5 grid grid-cols-2 gap-2">
+            <button
+              onClick={onMessage}
+              disabled={busy}
+              className="supaste-button flex min-h-[42px] items-center justify-center gap-2 rounded-full border border-black/10 bg-white text-xs font-semibold text-supaste-black disabled:opacity-50"
+            >
+              <MessageCircle className="h-3.5 w-3.5" /> Mensagem
+            </button>
+            <button
+              onClick={onBuyIntent}
+              disabled={busy}
+              className="supaste-button flex min-h-[42px] items-center justify-center gap-2 rounded-full bg-supaste-black text-xs font-semibold text-white disabled:opacity-50"
+            >
+              <ShoppingCart className="h-3.5 w-3.5" /> Comprar
+            </button>
+          </div>
+        )}
+      </div>
+    </article>
+  );
+}
+
+function OLXCard({ ad }: { ad: OLXAd }) {
+  return (
+    <a
+      href={ad.url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="supaste-glass-strong group block overflow-hidden rounded-[28px] transition-transform duration-400 ease-in-out hover:-translate-y-1"
+    >
+      <div className="relative aspect-[4/3] bg-[#f5f5f7]">
+        {ad.image_url ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={ad.image_url}
+            alt={ad.title}
+            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"
+          />
+        ) : (
+          <div className="grid h-full w-full place-items-center text-supaste-muted">
+            <ExternalLink className="h-8 w-8" />
+          </div>
+        )}
+        <span className="absolute left-4 top-4 rounded-full bg-white/86 px-3 py-1 text-[10px] font-bold text-supaste-black backdrop-blur">
+          OLX Portugal
+        </span>
+        <span className="absolute bottom-4 right-4 rounded-full bg-supaste-black px-3 py-1 text-[10px] font-bold text-white">
+          {ad.location.split(",")[0]}
+        </span>
+      </div>
+      <div className="p-5">
+        <div className="flex items-start justify-between gap-4">
+          <h3 className="line-clamp-2 text-lg font-bold leading-snug tracking-[-0.03em] text-supaste-black">
+            {ad.title}
+          </h3>
+          <span className="shrink-0 text-lg font-bold text-supaste-black">{ad.price_display}</span>
+        </div>
+        <p className="mt-3 line-clamp-3 text-sm leading-6 text-supaste-muted">{ad.description}</p>
+        <div className="mt-5 flex items-center justify-between border-t border-black/10 pt-4 text-xs font-semibold text-supaste-muted">
+          <span className="truncate">{ad.seller_name}</span>
+          <span className="flex items-center gap-1 text-supaste-blue">
+            Abrir <ExternalLink className="h-3.5 w-3.5" />
+          </span>
+        </div>
+      </div>
+    </a>
+  );
+}
+
+function EmptyState({ title, body }: { title: string; body: string }) {
+  return (
+    <div className="supaste-glass-strong grid min-h-[260px] place-items-center rounded-[28px] text-center">
+      <div>
+        <SlidersHorizontal className="mx-auto h-8 w-8 text-supaste-muted" />
+        <p className="mt-3 text-sm font-bold text-supaste-black">{title}</p>
+        <p className="mt-1 text-xs text-supaste-muted">{body}</p>
+      </div>
+    </div>
   );
 }

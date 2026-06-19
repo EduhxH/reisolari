@@ -56,32 +56,32 @@ export default function AdminReportsPage() {
 
   if (denied) {
     return (
-      <main className="min-h-screen bg-bg text-slate-100 grid place-items-center p-6">
+      <main className="min-h-screen bg-supaste-mist text-supaste-ink grid place-items-center p-6">
         <div className="text-center space-y-3">
-          <p className="text-slate-300">Acesso restrito a moderadores.</p>
-          <Link href="/marketplace" className="text-emerald-400 font-semibold">← Marketplace</Link>
+          <p className="text-supaste-muted">Acesso restrito a moderadores.</p>
+          <Link href="/marketplace" className="text-supaste-blue font-semibold">← Marketplace</Link>
         </div>
       </main>
     );
   }
 
   return (
-    <main className="min-h-screen bg-bg text-slate-100 p-6">
+    <main className="min-h-screen bg-supaste-mist text-supaste-ink p-6">
       <div className="max-w-3xl mx-auto space-y-5">
-        <header className="flex items-center justify-between border-b border-slate-800 pb-4">
+        <header className="flex items-center justify-between border-b border-black/10 pb-4">
           <div>
-            <h1 className="text-2xl font-bold text-white">Moderação · Denúncias</h1>
-            <p className="text-sm text-slate-400">Fila de denúncias pendentes, por alvo.</p>
+            <h1 className="text-2xl font-bold text-supaste-ink">Moderação · Denúncias</h1>
+            <p className="text-sm text-supaste-muted">Fila de denúncias pendentes, por alvo.</p>
           </div>
-          <Link href="/marketplace" className="text-xs font-semibold text-slate-300 hover:text-emerald-300">
+          <Link href="/marketplace" className="text-xs font-semibold text-supaste-muted hover:text-supaste-blue">
             ← Marketplace
           </Link>
         </header>
 
-        {loading ? <p className="text-sm text-slate-400">A carregar…</p> : null}
+        {loading ? <p className="text-sm text-supaste-muted">A carregar…</p> : null}
 
         {!loading && groups.length === 0 ? (
-          <div className="text-sm text-slate-400 py-12 text-center border border-dashed border-slate-800 rounded-lg">
+          <div className="text-sm text-supaste-muted py-12 text-center border border-dashed border-black/10 rounded-lg">
             Sem denúncias pendentes. 🎉
           </div>
         ) : (
@@ -92,13 +92,13 @@ export default function AdminReportsPage() {
               const title = isListing ? group.info.title ?? "Anúncio" : group.info.name ?? "Utilizador";
               const reasons = Array.from(new Set(group.reasons)).map(r => REASON_LABELS[r] ?? r);
               return (
-                <li key={group.key} className="rounded-xl border border-slate-800 bg-card p-4 space-y-2">
+                <li key={group.key} className="rounded-xl border border-black/10 bg-white p-4 space-y-2">
                   <div className="flex items-center justify-between gap-2">
                     <div className="min-w-0">
-                      <Link href={href} className="text-sm font-semibold text-slate-100 hover:text-emerald-300">
+                      <Link href={href} className="text-sm font-semibold text-supaste-ink hover:text-supaste-blue">
                         {title}
                       </Link>
-                      <span className="text-[11px] text-slate-500 ml-2">
+                      <span className="text-[11px] text-supaste-muted ml-2">
                         {isListing ? "anúncio" : "utilizador"}
                       </span>
                       {isListing && group.info.active === false ? (
@@ -110,12 +110,12 @@ export default function AdminReportsPage() {
                     </span>
                   </div>
 
-                  <p className="text-[11px] text-slate-400">{reasons.join(" · ")}</p>
+                  <p className="text-[11px] text-supaste-muted">{reasons.join(" · ")}</p>
 
                   {group.details.length > 0 ? (
                     <ul className="space-y-1">
                       {group.details.slice(0, 5).map((detail, index) => (
-                        <li key={index} className="text-[11px] text-slate-500 italic">“{detail}”</li>
+                        <li key={index} className="text-[11px] text-supaste-muted italic">“{detail}”</li>
                       ))}
                     </ul>
                   ) : null}
@@ -124,7 +124,7 @@ export default function AdminReportsPage() {
                     <button
                       onClick={() => resolve(group, "dismiss")}
                       disabled={busy === group.key}
-                      className="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300 bg-slate-900 border border-slate-800 hover:border-emerald-700 disabled:opacity-50"
+                      className="px-3 py-1.5 rounded-lg text-xs font-semibold text-supaste-muted bg-supaste-section border border-black/10 hover:border-supaste-blue disabled:opacity-50"
                     >
                       Dispensar
                     </button>

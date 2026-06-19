@@ -1,20 +1,22 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import React, { useEffect, useState } from "react";
 import {
   createUserWithEmailAndPassword,
-  updateProfile,
-  sendEmailVerification
+  sendEmailVerification,
+  updateProfile
 } from "firebase/auth";
+import { LockKeyhole, Mail, User } from "lucide-react";
+import AuthExtraMethods from "@/components/AuthExtraMethods";
 import { auth } from "@/lib/firebase";
 import { useAuth } from "@/lib/auth";
 import { getRedirectTarget, translateAuthError } from "@/lib/authErrors";
 import { ANUNCIAR_ROUTE, consumeSellerIntent, hasSellerIntent } from "@/lib/onboarding";
 import { upsertSellerProfile } from "@/lib/seller";
 import { getQuestionnaireStatus } from "@/lib/questionnaire";
-import AuthExtraMethods from "@/components/AuthExtraMethods";
 
 export default function CreateAccountPage() {
   const router = useRouter();
@@ -26,7 +28,6 @@ export default function CreateAccountPage() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
-  // Post-onboarding interceptor: a new seller is routed straight to the wizard.
   useEffect(() => {
     if (loading || !user) return;
     let cancelled = false;
@@ -41,7 +42,6 @@ export default function CreateAccountPage() {
         }
         if (!cancelled) router.replace(ANUNCIAR_ROUTE);
       } else {
-        // Onboarding obrigatório: o questionário é a ação primária após o registo.
         try {
           const token = await user.getIdToken();
           const done = await getQuestionnaireStatus(token);
@@ -56,7 +56,6 @@ export default function CreateAccountPage() {
     };
   }, [user, loading, router]);
 
-  // Routing is handled by the interceptor effect once auth state updates.
   const onSuccess = () => {};
 
   const handleRegister = async (event: React.FormEvent) => {
@@ -67,20 +66,15 @@ export default function CreateAccountPage() {
       return;
     }
     if (password !== confirm) {
-      setError("As palavras-passe não coincidem.");
+      setError("As palavras-passe nao coincidem.");
       return;
     }
     setBusy(true);
     try {
-      const credential = await createUserWithEmailAndPassword(
-        auth,
-        email.trim(),
-        password
-      );
+      const credential = await createUserWithEmailAndPassword(auth, email.trim(), password);
       if (name.trim()) {
         await updateProfile(credential.user, { displayName: name.trim() });
       }
-      // Best-effort verification email; never blocks account creation.
       sendEmailVerification(credential.user).catch(() => undefined);
       onSuccess();
     } catch (err) {
@@ -91,66 +85,92 @@ export default function CreateAccountPage() {
   };
 
   return (
-    <main className="min-h-screen bg-bg text-slate-100 grid place-items-center p-6">
-      <div className="w-full max-w-sm space-y-6">
-        <div className="text-center space-y-1">
-          <Link href="/" className="text-2xl font-bold text-white">
-            Reisolari
-          </Link>
-          <p className="text-sm text-slate-400">Crie a sua conta gratuita</p>
+    <main className="relative grid min-h-screen place-items-center overflow-hidden bg-white px-5 py-12 text-supaste-ink">
+      <div
+        className="absolute inset-0 -z-10 bg-cover bg-center opacity-85"
+        style={{ backgroundImage: "url('/images/landing-background-top.jpeg')" }}
+      />
+      <div className="absolute inset-0 -z-10 bg-gradient-to-b from-white/62 via-white/88 to-white" />
+
+      <Link
+        href="/"
+        className="supaste-glass-strong fixed left-5 top-5 z-10 flex items-center gap-3 rounded-full px-4 py-2 text-sm font-bold text-supaste-black"
+      >
+        <span className="relative h-8 w-8 overflow-hidden rounded-full border border-black/10 bg-white">
+          <Image src="/images/reisolari-logo.jpeg" alt="Reisolari" fill className="object-cover" />
+        </span>
+        Reisolari
+      </Link>
+
+      <section className="supaste-glass-strong w-full max-w-[470px] rounded-[32px] p-6 shadow-supaste-frame sm:p-8">
+        <div className="text-center">
+          <p className="font-mono text-xs uppercase text-supaste-blue">Conta Reisolari</p>
+          <h1 className="mt-3 font-display text-4xl font-bold tracking-[-0.04em] text-supaste-black">
+            Criar conta
+          </h1>
+          <p className="mt-3 text-sm leading-6 text-supaste-muted">
+            Guarde simulacoes PVGIS, publique anuncios e acompanhe propostas solares reais.
+          </p>
         </div>
 
-        <form
-          onSubmit={handleRegister}
-          className="space-y-3 rounded-xl border border-slate-800 bg-card p-5"
-        >
-          <div className="space-y-1">
-            <label className="text-xs text-slate-400">Nome</label>
+        <form onSubmit={handleRegister} className="mt-7 space-y-3">
+          <label className="block space-y-1.5">
+            <span className="flex items-center gap-2 text-xs font-semibold text-supaste-muted">
+              <User className="h-3.5 w-3.5" /> Nome
+            </span>
             <input
               value={name}
               onChange={e => setName(e.target.value)}
-              className="w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2 text-sm outline-none focus:border-emerald-600"
+              className="w-full rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm text-supaste-black outline-none transition-colors duration-300 placeholder:text-supaste-muted/70 focus:border-supaste-blue"
               placeholder="Maria Silva"
             />
-          </div>
-          <div className="space-y-1">
-            <label className="text-xs text-slate-400">Email</label>
+          </label>
+
+          <label className="block space-y-1.5">
+            <span className="flex items-center gap-2 text-xs font-semibold text-supaste-muted">
+              <Mail className="h-3.5 w-3.5" /> Email
+            </span>
             <input
               type="email"
               required
               value={email}
               onChange={e => setEmail(e.target.value)}
-              className="w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2 text-sm outline-none focus:border-emerald-600"
+              className="w-full rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm text-supaste-black outline-none transition-colors duration-300 placeholder:text-supaste-muted/70 focus:border-supaste-blue"
               placeholder="email@exemplo.pt"
             />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <label className="text-xs text-slate-400">Palavra-passe</label>
+          </label>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="block space-y-1.5">
+              <span className="flex items-center gap-2 text-xs font-semibold text-supaste-muted">
+                <LockKeyhole className="h-3.5 w-3.5" /> Palavra-passe
+              </span>
               <input
                 type="password"
                 required
                 value={password}
                 onChange={e => setPassword(e.target.value)}
-                className="w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2 text-sm outline-none focus:border-emerald-600"
-                placeholder="••••••••"
+                className="w-full rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm text-supaste-black outline-none transition-colors duration-300 placeholder:text-supaste-muted/70 focus:border-supaste-blue"
+                placeholder="Minimo 6 caracteres"
               />
-            </div>
-            <div className="space-y-1">
-              <label className="text-xs text-slate-400">Confirmar</label>
+            </label>
+            <label className="block space-y-1.5">
+              <span className="flex items-center gap-2 text-xs font-semibold text-supaste-muted">
+                <LockKeyhole className="h-3.5 w-3.5" /> Confirmar
+              </span>
               <input
                 type="password"
                 required
                 value={confirm}
                 onChange={e => setConfirm(e.target.value)}
-                className="w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2 text-sm outline-none focus:border-emerald-600"
-                placeholder="••••••••"
+                className="w-full rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm text-supaste-black outline-none transition-colors duration-300 placeholder:text-supaste-muted/70 focus:border-supaste-blue"
+                placeholder="Repetir palavra-passe"
               />
-            </div>
+            </label>
           </div>
 
           {error ? (
-            <div className="text-xs text-red-300 bg-red-950/40 border border-red-900/50 rounded-lg p-2.5">
+            <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-xs font-medium text-red-700">
               {error}
             </div>
           ) : null}
@@ -158,7 +178,7 @@ export default function CreateAccountPage() {
           <button
             type="submit"
             disabled={busy}
-            className="w-full bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-slate-950 font-semibold rounded-lg py-2.5 text-sm transition-colors"
+            className="supaste-button min-h-[48px] w-full rounded-full bg-supaste-black px-5 text-sm font-semibold text-white disabled:opacity-50"
           >
             {busy ? "A criar conta..." : "Criar conta"}
           </button>
@@ -166,13 +186,13 @@ export default function CreateAccountPage() {
           <AuthExtraMethods onSuccess={onSuccess} onError={setError} />
         </form>
 
-        <p className="text-center text-sm text-slate-400">
-          Já tem conta?{" "}
-          <Link href="/login" className="text-emerald-400 hover:text-emerald-300 font-semibold">
-            Iniciar sessão
+        <p className="mt-6 text-center text-sm text-supaste-muted">
+          Ja tem conta?{" "}
+          <Link href="/login" className="font-semibold text-supaste-blue hover:text-supaste-black">
+            Iniciar sessao
           </Link>
         </p>
-      </div>
+      </section>
     </main>
   );
 }

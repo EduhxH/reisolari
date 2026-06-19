@@ -8,10 +8,13 @@ and prices are refreshed on every startup, while live ``stock`` is preserved so
 that inventory consumed by real orders is never reset.
 """
 
+import logging
 from datetime import datetime, timezone
 
 from app.db.mongo import get_db_client
 from app.schemas.panel import PanelSpec
+
+logger = logging.getLogger(__name__)
 
 # slug, name, brand, model, category, panel_type, power_w, efficiency,
 # cell_count, width_mm, height_mm, depth_mm, weight_kg,
@@ -258,6 +261,49 @@ async def seed_catalog() -> int:
             upsert=True,
         )
     return len(CATALOG)
+
+
+async def seed_product_images(limit: int = 9) -> int:
+    """Fill ``image_url``/``source_url`` for catalog products missing a real photo.
+
+    Sources real product photography from Google Shopping via SerpAPI (the same
+    integration used by the Ideais sourcing). Idempotent — only products without an
+    image are queried, so it runs at most once per product and never on subsequent
+    startups. Non-fatal: a missing image simply falls back to the panel graphic.
+    """
+    from app.services.panel_sourcing import _source_serpapi  # import tardio (evita ciclos)
+
+    db = get_db_client().solar_p2p
+    filled = 0
+    cursor = db.products.find({"$or": [{"image_url": {"$exists": False}}, {"image_url": None}]})
+    pending = [doc async for doc in cursor]
+    for doc in pending[:limit]:
+        power = doc.get("power_w")
+        queries = [
+            f"{doc.get('brand', '')} {doc.get('model', '')} painel solar".strip(),
+            f"{doc.get('brand', '')} {power}W painel solar".strip(),
+            f"{doc.get('name', '')}".strip(),
+        ]
+        best = None
+        for query in queries:
+            try:
+                results = await _source_serpapi(query, limit=6)
+            except Exception as exc:
+                logger.warning("Image sourcing failed for %s: %s", doc.get("slug"), exc)
+                continue
+            # Preferir um resultado com a potência do módulo no título e com imagem.
+            best = next((r for r in results if r.image_url and r.power_w == power), None)
+            best = best or next((r for r in results if r.image_url), None)
+            if best is not None:
+                break
+        if best is None:
+            continue
+        await db.products.update_one(
+            {"_id": doc["_id"]},
+            {"$set": {"image_url": best.image_url, "source_url": best.url, "updated_at": datetime.now(timezone.utc)}},
+        )
+        filled += 1
+    return filled
 
 
 async def get_panel_specs_from_products() -> list[PanelSpec]:

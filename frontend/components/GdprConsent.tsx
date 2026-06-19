@@ -9,7 +9,7 @@ type Props = {
 
 const GdprConsent: React.FC<Props> = ({ checked, onChange }) => {
   return (
-    <label className="flex items-start gap-3 rounded-lg border border-slate-800 bg-card p-4 text-sm text-slate-300">
+    <label className="flex items-start gap-3 rounded-lg border border-black/10 bg-white p-4 text-sm text-supaste-muted">
       <input
         type="checkbox"
         checked={checked}

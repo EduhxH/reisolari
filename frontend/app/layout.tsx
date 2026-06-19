@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import "../styles/globals.css";
 import { AuthProvider } from "@/lib/auth";
 import { RealtimeProvider } from "@/lib/realtime";
+import { CartProvider } from "@/lib/cart";
 
 export const metadata: Metadata = {
   title: "Reisolari",
@@ -19,7 +20,9 @@ export default function RootLayout({
     <html lang="pt">
       <body>
         <AuthProvider>
-          <RealtimeProvider>{children}</RealtimeProvider>
+          <RealtimeProvider>
+            <CartProvider>{children}</CartProvider>
+          </RealtimeProvider>
         </AuthProvider>
       </body>
     </html>

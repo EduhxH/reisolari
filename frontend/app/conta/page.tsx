@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useAuth } from "@/lib/auth";
 import { formatPrice } from "@/lib/api";
 import { displayNameFor } from "@/lib/auth";
@@ -34,7 +35,7 @@ const EMPTY_PROFILE: MyProfile = {
 };
 
 const inputClass =
-  "w-full mt-1 rounded-lg bg-slate-950 border border-slate-700 px-3 py-2 text-sm text-slate-100 outline-none focus:border-emerald-600";
+  "w-full mt-1 rounded-lg bg-white border border-black/10 px-3 py-2 text-sm text-supaste-ink outline-none focus:border-supaste-blue";
 
 const conditionLabels: Record<string, string> = {
   novo: "Novo",
@@ -46,10 +47,10 @@ const conditionLabels: Record<string, string> = {
 function StatusBadge({ listing }: { listing: MyListing }) {
   const cls =
     listing.status === "sold"
-      ? "bg-amber-400/20 text-amber-300 border-amber-500/30"
+      ? "bg-amber-100 text-amber-700 border-amber-200"
       : listing.active
-      ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/30"
-      : "bg-slate-700/40 text-slate-400 border-slate-600/40";
+      ? "bg-supaste-blue/10 text-supaste-blue border-supaste-blue/20"
+      : "bg-black/5 text-supaste-muted border-black/10";
   const label = listing.status === "sold" ? "Vendido" : listing.active ? "Ativo" : "Inativo";
   return <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${cls}`}>{label}</span>;
 }
@@ -242,39 +243,46 @@ export default function ContaPage() {
   ];
 
   return (
-    <main className="min-h-screen bg-bg text-slate-100 p-6">
-      <div className="max-w-4xl mx-auto space-y-6">
-        <header className="flex items-center justify-between border-b border-slate-800 pb-4">
-          <div>
-            <h1 className="text-2xl font-bold text-white">A minha conta</h1>
-            <p className="text-sm text-slate-400">
-              {user ? displayNameFor(user) : ""} · gerir anúncios e conversas
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
+    <main className="min-h-screen bg-supaste-mist text-supaste-ink">
+      <header className="px-4 pt-5">
+        <nav className="supaste-glass-strong mx-auto flex max-w-4xl items-center justify-between rounded-full px-4 py-2.5">
+          <Link href="/" className="flex items-center gap-2.5">
+            <Image src="/images/reisolari-logo.jpeg" alt="Reisolari" width={30} height={30} className="rounded-full" />
+            <span className="font-display text-base font-semibold tracking-tight">Reisolari</span>
+          </Link>
+          <div className="flex items-center gap-4 text-sm font-medium text-supaste-muted">
             {user ? (
-              <Link href={`/perfil/${user.uid}`} className="text-xs font-semibold text-emerald-300 hover:text-emerald-200">
-                Ver perfil público
+              <Link href={`/perfil/${user.uid}`} className="transition-colors hover:text-supaste-ink">
+                Perfil público
               </Link>
             ) : null}
             {isAdmin ? (
-              <Link href="/admin/reports" className="text-xs font-semibold text-amber-300 hover:text-amber-200">
+              <Link href="/admin/reports" className="text-amber-600 transition-colors hover:text-amber-500">
                 Moderação
               </Link>
             ) : null}
-            <Link href="/marketplace" className="text-xs font-semibold text-slate-300 hover:text-emerald-300">
-              ← Marketplace
+            <Link href="/marketplace" className="transition-colors hover:text-supaste-ink">
+              Marketplace
             </Link>
           </div>
-        </header>
+        </nav>
+      </header>
 
-        <div className="flex bg-slate-900 p-1 rounded-lg border border-slate-800 self-start w-fit">
+      <div className="mx-auto max-w-4xl space-y-6 px-6 py-8">
+        <div>
+          <h1 className="font-display text-3xl font-semibold tracking-tight">A minha conta</h1>
+          <p className="text-sm text-supaste-muted">
+            {user ? displayNameFor(user) : ""} · gerir anúncios e conversas
+          </p>
+        </div>
+
+        <div className="flex bg-supaste-section p-1 rounded-lg border border-black/10 self-start w-fit">
           {tabs.map(item => (
             <button
               key={item.id}
               onClick={() => setTab(item.id)}
               className={`px-4 py-1.5 rounded-md text-xs font-semibold transition-all ${
-                tab === item.id ? "bg-slate-800 text-emerald-400" : "text-slate-400 hover:text-slate-200"
+                tab === item.id ? "bg-supaste-section text-supaste-blue" : "text-supaste-muted hover:text-supaste-ink"
               }`}
             >
               {item.label}
@@ -282,14 +290,14 @@ export default function ContaPage() {
           ))}
         </div>
 
-        {loadingTab ? <p className="text-sm text-slate-400">A carregar…</p> : null}
+        {loadingTab ? <p className="text-sm text-supaste-muted">A carregar…</p> : null}
 
         {/* Meus anúncios */}
         {tab === "listings" ? (
           listings.length === 0 && !loadingTab ? (
-            <div className="text-sm text-slate-400 py-12 text-center border border-dashed border-slate-800 rounded-lg">
+            <div className="text-sm text-supaste-muted py-12 text-center border border-dashed border-black/10 rounded-lg">
               Ainda não tem anúncios.{" "}
-              <Link href="/dashboard/marketplace/anunciar" className="text-emerald-400 font-semibold">
+              <Link href="/dashboard/marketplace/anunciar" className="text-supaste-blue font-semibold">
                 Criar anúncio
               </Link>
             </div>
@@ -298,9 +306,9 @@ export default function ContaPage() {
               {listings.map(listing => (
                 <li
                   key={listing.id}
-                  className="flex items-center gap-3 rounded-xl border border-slate-800 bg-card p-3"
+                  className="flex items-center gap-3 rounded-xl border border-black/10 bg-white p-3"
                 >
-                  <div className="h-14 w-14 rounded bg-slate-950 overflow-hidden shrink-0">
+                  <div className="h-14 w-14 rounded bg-white overflow-hidden shrink-0">
                     {listing.image_urls[0] ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={listing.image_urls[0]} alt="" className="h-full w-full object-cover" />
@@ -308,11 +316,11 @@ export default function ContaPage() {
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-semibold text-slate-100 truncate">{listing.title}</span>
+                      <span className="text-sm font-semibold text-supaste-ink truncate">{listing.title}</span>
                       <StatusBadge listing={listing} />
                     </div>
-                    <div className="text-[11px] text-slate-500 flex items-center gap-2">
-                      <span className="text-emerald-400 font-bold">
+                    <div className="text-[11px] text-supaste-muted flex items-center gap-2">
+                      <span className="text-supaste-blue font-bold">
                         {formatPrice(listing.price_cents, listing.currency)}
                       </span>
                       <span>· {conditionLabels[listing.condition] ?? listing.condition}</span>
@@ -321,7 +329,7 @@ export default function ContaPage() {
                   </div>
                   <Link
                     href={`/anuncio/${listing.id}/editar`}
-                    className="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300 bg-slate-800 border border-slate-700 hover:border-emerald-700 whitespace-nowrap"
+                    className="px-3 py-1.5 rounded-lg text-xs font-semibold text-supaste-muted bg-supaste-section border border-black/10 hover:border-supaste-blue whitespace-nowrap"
                   >
                     Editar
                   </Link>
@@ -330,7 +338,7 @@ export default function ContaPage() {
                     disabled={busy === listing.id}
                     className={`px-3 py-1.5 rounded-lg text-xs font-semibold disabled:opacity-50 transition-colors whitespace-nowrap ${
                       listing.status === "sold"
-                        ? "text-emerald-300 bg-slate-800 border border-slate-700 hover:border-emerald-700"
+                        ? "text-supaste-blue bg-supaste-section border border-black/10 hover:border-supaste-blue"
                         : "text-slate-950 bg-amber-400 hover:bg-amber-300"
                     }`}
                   >
@@ -345,7 +353,7 @@ export default function ContaPage() {
         {/* Conversas */}
         {tab === "chats" ? (
           rooms.length === 0 && !loadingTab ? (
-            <div className="text-sm text-slate-400 py-12 text-center border border-dashed border-slate-800 rounded-lg">
+            <div className="text-sm text-supaste-muted py-12 text-center border border-dashed border-black/10 rounded-lg">
               Sem conversas ainda.
             </div>
           ) : (
@@ -354,9 +362,9 @@ export default function ContaPage() {
                 <li key={room.id}>
                   <Link
                     href={`/mensagens?room=${room.id}`}
-                    className="flex items-center gap-3 rounded-xl border border-slate-800 bg-card p-3 hover:border-emerald-700 transition-colors"
+                    className="flex items-center gap-3 rounded-xl border border-black/10 bg-white p-3 hover:border-supaste-blue transition-colors"
                   >
-                    <div className="h-12 w-12 rounded bg-slate-950 overflow-hidden shrink-0">
+                    <div className="h-12 w-12 rounded bg-white overflow-hidden shrink-0">
                       {room.listing?.image_url ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img src={room.listing.image_url} alt="" className="h-full w-full object-cover" />
@@ -364,16 +372,16 @@ export default function ContaPage() {
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center justify-between gap-2">
-                        <span className="text-sm font-semibold text-slate-100 truncate">
+                        <span className="text-sm font-semibold text-supaste-ink truncate">
                           {room.listing?.title ?? "Anúncio"}
                         </span>
                         {room.unread > 0 ? (
-                          <span className="min-w-[16px] h-4 px-1 grid place-items-center rounded-full bg-emerald-500 text-[10px] font-bold text-slate-950">
+                          <span className="min-w-[16px] h-4 px-1 grid place-items-center rounded-full bg-supaste-black text-[10px] font-bold text-slate-950">
                             {room.unread}
                           </span>
                         ) : null}
                       </div>
-                      <span className="text-[11px] text-slate-500">
+                      <span className="text-[11px] text-supaste-muted">
                         {room.role === "buyer" ? "Vendedor" : "Comprador"}
                         {room.last_message ? ` · ${room.last_message.content.slice(0, 40)}` : ""}
                       </span>
@@ -388,28 +396,28 @@ export default function ContaPage() {
         {/* Favoritos */}
         {tab === "favorites" ? (
           favorites.length === 0 && !loadingTab ? (
-            <div className="text-sm text-slate-400 py-12 text-center border border-dashed border-slate-800 rounded-lg">
+            <div className="text-sm text-supaste-muted py-12 text-center border border-dashed border-black/10 rounded-lg">
               Ainda não guardou anúncios nos favoritos.
             </div>
           ) : (
             <ul className="grid sm:grid-cols-2 gap-3">
               {favorites.map(listing => (
-                <li key={listing.id} className="rounded-xl border border-slate-800 bg-card p-3 flex items-center gap-3">
-                  <div className="h-14 w-14 rounded bg-slate-950 overflow-hidden shrink-0">
+                <li key={listing.id} className="rounded-xl border border-black/10 bg-white p-3 flex items-center gap-3">
+                  <div className="h-14 w-14 rounded bg-white overflow-hidden shrink-0">
                     {listing.image_urls?.[0] ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={listing.image_urls[0]} alt="" className="h-full w-full object-cover" />
                     ) : null}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <span className="text-sm font-semibold text-slate-100 truncate block">{listing.title}</span>
-                    <span className="text-[11px] text-emerald-400 font-bold">
+                    <span className="text-sm font-semibold text-supaste-ink truncate block">{listing.title}</span>
+                    <span className="text-[11px] text-supaste-blue font-bold">
                       {formatPrice(listing.price_cents, listing.currency)}
                     </span>
                   </div>
                   <button
                     onClick={() => unfavorite(listing.id)}
-                    className="text-xs text-slate-400 hover:text-red-400"
+                    className="text-xs text-supaste-muted hover:text-red-400"
                     aria-label="Remover dos favoritos"
                   >
                     Remover
@@ -423,13 +431,13 @@ export default function ContaPage() {
         {/* Perfil */}
         {tab === "perfil" ? (
           <div className="space-y-4 max-w-2xl">
-            <div className="rounded-xl border border-slate-800 bg-card overflow-hidden">
-              <div className="h-28 bg-gradient-to-r from-emerald-900/60 via-slate-800 to-slate-900 relative">
+            <div className="rounded-xl border border-black/10 bg-white overflow-hidden">
+              <div className="h-28 bg-gradient-to-r from-supaste-blue/20 via-supaste-section to-white relative">
                 {profile?.banner_url ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={profile.banner_url} alt="" className="h-full w-full object-cover" />
                 ) : null}
-                <label className="absolute bottom-2 right-2 text-[11px] font-semibold text-slate-950 bg-emerald-500 hover:bg-emerald-400 rounded px-2 py-1 cursor-pointer">
+                <label className="absolute bottom-2 right-2 text-[11px] font-semibold text-white bg-supaste-black hover:opacity-90 rounded px-2 py-1 cursor-pointer">
                   {uploading === "banner" ? "A enviar…" : "Mudar banner"}
                   <input
                     type="file"
@@ -444,17 +452,17 @@ export default function ContaPage() {
                 </label>
               </div>
               <div className="p-4 flex items-center gap-3 -mt-10">
-                <div className="h-20 w-20 rounded-2xl border-4 border-card bg-slate-800 overflow-hidden grid place-items-center shrink-0">
+                <div className="h-20 w-20 rounded-2xl border-4 border-card bg-supaste-section overflow-hidden grid place-items-center shrink-0">
                   {profile?.avatar_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={profile.avatar_url} alt="" className="h-full w-full object-cover" />
                   ) : (
-                    <span className="text-2xl font-bold text-emerald-400">
+                    <span className="text-2xl font-bold text-supaste-blue">
                       {(profile?.display_name || "U").charAt(0).toUpperCase()}
                     </span>
                   )}
                 </div>
-                <label className="text-[11px] font-semibold text-emerald-300 border border-emerald-500/40 rounded px-2 py-1 cursor-pointer hover:bg-emerald-500/10">
+                <label className="text-[11px] font-semibold text-supaste-blue border border-supaste-blue/30 rounded px-2 py-1 cursor-pointer hover:bg-supaste-blue/10">
                   {uploading === "avatar" ? "A enviar…" : "Mudar foto"}
                   <input
                     type="file"
@@ -472,7 +480,7 @@ export default function ContaPage() {
 
             <div className="grid sm:grid-cols-2 gap-3">
               <div>
-                <label className="text-xs text-slate-400">Nome a mostrar</label>
+                <label className="text-xs text-supaste-muted">Nome a mostrar</label>
                 <input
                   value={profile?.display_name ?? ""}
                   onChange={event => setProfileField("display_name", event.target.value)}
@@ -481,7 +489,7 @@ export default function ContaPage() {
                 />
               </div>
               <div>
-                <label className="text-xs text-slate-400">Localidade</label>
+                <label className="text-xs text-supaste-muted">Localidade</label>
                 <input
                   value={profile?.location ?? ""}
                   onChange={event => setProfileField("location", event.target.value)}
@@ -490,7 +498,7 @@ export default function ContaPage() {
                 />
               </div>
               <div>
-                <label className="text-xs text-slate-400">Profissão</label>
+                <label className="text-xs text-supaste-muted">Profissão</label>
                 <input
                   value={profile?.profession ?? ""}
                   onChange={event => setProfileField("profession", event.target.value)}
@@ -499,7 +507,7 @@ export default function ContaPage() {
                 />
               </div>
               <div>
-                <label className="text-xs text-slate-400">Emprego / empresa</label>
+                <label className="text-xs text-supaste-muted">Emprego / empresa</label>
                 <input
                   value={profile?.employer ?? ""}
                   onChange={event => setProfileField("employer", event.target.value)}
@@ -510,7 +518,7 @@ export default function ContaPage() {
             </div>
 
             <div>
-              <label className="text-xs text-slate-400">Biografia</label>
+              <label className="text-xs text-supaste-muted">Biografia</label>
               <textarea
                 value={profile?.bio ?? ""}
                 onChange={event => setProfileField("bio", event.target.value)}
@@ -525,13 +533,13 @@ export default function ContaPage() {
               <button
                 onClick={saveProfile}
                 disabled={savingProfile}
-                className="px-5 py-2 rounded-lg text-sm font-semibold text-slate-950 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50"
+                className="px-5 py-2 rounded-lg text-sm font-semibold text-white bg-supaste-black hover:opacity-90 disabled:opacity-50"
               >
                 {savingProfile ? "A guardar…" : "Guardar perfil"}
               </button>
-              {profileSaved ? <span className="text-xs text-emerald-400">Perfil guardado ✓</span> : null}
+              {profileSaved ? <span className="text-xs text-supaste-blue">Perfil guardado ✓</span> : null}
               {user ? (
-                <Link href={`/perfil/${user.uid}`} className="text-xs text-slate-400 hover:text-emerald-300">
+                <Link href={`/perfil/${user.uid}`} className="text-xs text-supaste-muted hover:text-supaste-blue">
                   Ver perfil público →
                 </Link>
               ) : null}
@@ -542,9 +550,9 @@ export default function ContaPage() {
         {/* Simulador / Definições */}
         {tab === "simulador" ? (
           <div className="space-y-4 max-w-2xl">
-            <div className="rounded-xl border border-slate-800 bg-card p-5 space-y-3">
+            <div className="rounded-xl border border-black/10 bg-white p-5 space-y-3">
               <h2 className="text-lg font-semibold text-white">Simulador solar</h2>
-              <p className="text-sm text-slate-400">
+              <p className="text-sm text-supaste-muted">
                 {hasSimulation
                   ? "Pode rever as suas propostas, descarregar o orçamento ou refazer o questionário a qualquer momento."
                   : "Ainda não fez o questionário. Faça-o para receber as suas propostas ideais."}
@@ -552,7 +560,7 @@ export default function ContaPage() {
               <div className="flex flex-wrap items-center gap-3 pt-1">
                 <Link
                   href="/questionario"
-                  className="px-4 py-2 rounded-lg text-sm font-semibold text-slate-950 bg-emerald-500 hover:bg-emerald-400"
+                  className="px-4 py-2 rounded-lg text-sm font-semibold text-white bg-supaste-black hover:opacity-90"
                 >
                   {hasSimulation ? "Refazer questionário" : "Fazer questionário"}
                 </Link>
@@ -560,14 +568,14 @@ export default function ContaPage() {
                   <>
                     <Link
                       href="/ideais"
-                      className="px-4 py-2 rounded-lg text-sm font-semibold text-slate-200 bg-slate-800 border border-slate-700 hover:border-emerald-700"
+                      className="px-4 py-2 rounded-lg text-sm font-semibold text-supaste-ink bg-supaste-section border border-black/10 hover:border-supaste-blue"
                     >
                       Ver propostas ideais
                     </Link>
                     <button
                       onClick={downloadQuote}
                       disabled={downloadingQuote}
-                      className="px-4 py-2 rounded-lg text-sm font-semibold text-slate-200 bg-slate-800 border border-slate-700 hover:border-emerald-700 disabled:opacity-50"
+                      className="px-4 py-2 rounded-lg text-sm font-semibold text-supaste-ink bg-supaste-section border border-black/10 hover:border-supaste-blue disabled:opacity-50"
                     >
                       {downloadingQuote ? "A gerar…" : "Descarregar orçamento (PDF)"}
                     </button>
