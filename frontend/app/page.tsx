@@ -3,8 +3,9 @@
 import Image from "next/image";
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import React, { useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
+import { fetchProduct, formatPrice, type Product } from "@/lib/api";
 import {
   ArrowRight,
   ClipboardList,
@@ -27,6 +28,61 @@ const SolarPanel3D = dynamic(() => import("@/components/SolarPanel3D"), {
     </div>
   )
 });
+
+// O modelo 3D representa um módulo real do catálogo (N-TOPCon, 22,8%).
+const SHOWCASE_PANEL_SLUG = "trina-vertex-s-plus-445";
+
+/** Nome real do painel do modelo 3D + ligação à sua página na loja. */
+function ShowcasePanelCard() {
+  const [product, setProduct] = useState<Product | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    fetchProduct(SHOWCASE_PANEL_SLUG)
+      .then(p => {
+        if (!cancelled) setProduct(p);
+      })
+      .catch(() => {
+        /* loja offline — mostramos na mesma o nome e a ligação */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const name = product?.name ?? "Trina Solar Vertex S+ 445 W";
+
+  return (
+    <Link
+      href={`/loja/${SHOWCASE_PANEL_SLUG}`}
+      className="mt-5 flex items-center gap-4 rounded-[22px] bg-white p-4 shadow-soft-float transition-transform hover:-translate-y-0.5"
+    >
+      <div className="grid h-16 w-16 shrink-0 place-items-center overflow-hidden rounded-2xl bg-supaste-section">
+        {product?.image_url ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={product.image_url} alt={name} referrerPolicy="no-referrer" className="h-full w-full object-contain p-1" />
+        ) : (
+          <Sun className="h-7 w-7 text-supaste-blue" />
+        )}
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="font-mono text-[11px] uppercase tracking-wide text-supaste-muted">
+          O modelo acima é este painel real
+        </div>
+        <div className="truncate font-display text-base font-semibold tracking-tight text-supaste-ink">{name}</div>
+        {product ? (
+          <div className="text-sm text-supaste-muted">
+            {product.panel_type} ·{" "}
+            <span className="font-semibold text-supaste-ink">{formatPrice(product.price_cents, product.currency)}</span>{" "}
+            <span className="text-supaste-muted">sem IVA</span>
+          </div>
+        ) : null}
+      </div>
+      <span className="shrink-0 rounded-full bg-supaste-black px-4 py-2 text-sm font-semibold text-white">
+        Ver na loja →
+      </span>
+    </Link>
+  );
+}
 
 function FadeUp({
   children,
@@ -267,6 +323,9 @@ export default function HomeLanding() {
             <span className="pointer-events-none absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full border border-black/5 bg-white/85 px-3 py-1 text-[11px] font-medium text-supaste-muted backdrop-blur">
               Arraste para rodar
             </span>
+          </div>
+          <div className="mx-auto max-w-3xl">
+            <ShowcasePanelCard />
           </div>
         </FadeUp>
       </section>

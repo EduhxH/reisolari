@@ -26,7 +26,8 @@ class SolutionArchetype(BaseModel):
     achievable_coverage: float
     annual_production_kwh: float
     net_system_cost_eur: float          # ex-IVA (painéis + BOS)
-    fiscal_real: Dict[str, Any]         # FiscalResult (cenário real)
-    fiscal_guiao: Dict[str, Any]        # FiscalResult (cenário guião)
+    fiscal_reduzido: Dict[str, Any]     # FiscalResult (tudo a IVA reduzido 6/5/4%)
+    fiscal_real: Dict[str, Any]         # FiscalResult (cenário real: painéis reduzido + bateria normal)
+    fiscal_guiao: Dict[str, Any]        # FiscalResult (cenário guião: tudo a IVA normal)
     co2_annual_kg: float
     co2_lifetime_kg: float

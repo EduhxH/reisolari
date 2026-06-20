@@ -45,6 +45,7 @@ def run_questionnaire_simulation(
         electricity_price_eur_kwh=questionnaire.electricity_price_eur_kwh,
         has_social_tariff=questionnaire.has_social_tariff,
         battery_cost_eur=battery_cost,
+        budget_eur=questionnaire.budget_eur,
     )
     if not solutions:
         raise ValueError("Não foi possível construir soluções para os dados fornecidos.")

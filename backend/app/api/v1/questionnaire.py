@@ -147,6 +147,28 @@ async def latest_result(user: dict = Depends(get_firebase_user)) -> Questionnair
     return QuestionnaireResult(**result)
 
 
+async def _fetch_recommended_panel_image(record: dict) -> bytes | None:
+    """Descarrega a foto do painel recomendado para embeber no PDF (best-effort)."""
+    result = record.get("result", {})
+    solutions = result.get("solutions", [])
+    rec_key = result.get("recommended_archetype")
+    rec = next((s for s in solutions if s.get("archetype") == rec_key), solutions[0] if solutions else {})
+    image_url = (rec.get("panel") or {}).get("image_url")
+    if not image_url:
+        return None
+    try:
+        import httpx
+
+        async with httpx.AsyncClient(timeout=10.0, follow_redirects=True) as client:
+            resp = await client.get(image_url, headers={"User-Agent": "Mozilla/5.0"})
+            resp.raise_for_status()
+            if resp.headers.get("content-type", "").startswith("image/"):
+                return resp.content
+    except Exception as exc:
+        logger.warning("Could not fetch panel image for PDF: %s", exc)
+    return None
+
+
 @router.get("/orcamento.pdf")
 async def download_quote(user: dict = Depends(get_firebase_user)) -> Response:
     from app.services.questionnaire_store import get_full_record
@@ -155,6 +177,7 @@ async def download_quote(user: dict = Depends(get_firebase_user)) -> Response:
     record = await get_full_record(user["sub"])
     if not record:
         raise HTTPException(status_code=404, detail="Ainda não há simulação.")
+    record["panel_image_bytes"] = await _fetch_recommended_panel_image(record)
     try:
         pdf_bytes = build_quote_pdf(record)
     except RuntimeError as exc:

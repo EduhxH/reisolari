@@ -44,6 +44,8 @@ class Questionnaire(BaseModel):
     has_social_tariff: bool = False
     wants_battery: bool = False
     battery_cost_eur: float = Field(default=0, ge=0)
+    # Orçamento total para o sistema (com IVA real). 0/None = sem limite.
+    budget_eur: Optional[float] = Field(default=None, ge=0)
 
     # --- Fatura (opcional) ---
     bill_filename: Optional[str] = None

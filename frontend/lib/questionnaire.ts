@@ -24,6 +24,7 @@ export type Questionnaire = {
   has_social_tariff: boolean;
   wants_battery: boolean;
   battery_cost_eur: number;
+  budget_eur?: number | null;
   bill_filename?: string | null;
 };
 
@@ -42,7 +43,8 @@ export const DEFAULT_QUESTIONNAIRE: Questionnaire = {
   electricity_price_eur_kwh: 0.2,
   has_social_tariff: false,
   wants_battery: false,
-  battery_cost_eur: 0
+  battery_cost_eur: 0,
+  budget_eur: null
 };
 
 export type PanelSpec = {
@@ -55,6 +57,11 @@ export type PanelSpec = {
   avg_price_eur: number;
   category: string;
   source_note: string;
+  brand?: string;
+  model?: string;
+  cell_count?: number;
+  image_url?: string | null;
+  description?: string;
 };
 
 export type FiscalResult = {
@@ -62,6 +69,8 @@ export type FiscalResult = {
   scenario_label: string;
   vat_panels_rate: number;
   vat_battery_rate: number;
+  net_cost_eur: number;
+  vat_amount_eur: number;
   total_cost_with_vat: number;
   effective_electricity_price_eur_kwh: number;
   annual_savings_eur: number;
@@ -83,6 +92,7 @@ export type SolutionArchetype = {
   achievable_coverage: number;
   annual_production_kwh: number;
   net_system_cost_eur: number;
+  fiscal_reduzido: FiscalResult;
   fiscal_real: FiscalResult;
   fiscal_guiao: FiscalResult;
   co2_annual_kg: number;

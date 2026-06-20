@@ -1,16 +1,24 @@
+from typing import Optional
+
 from pydantic import BaseModel
 
 
 class PanelSpec(BaseModel):
-    code: str
+    code: str                            # slug do produto na loja (= /loja/<code>)
     name: str
     power_w: int
     width_mm: int
     height_mm: int
     efficiency: float
-    avg_price_eur: float
+    avg_price_eur: float                 # preço unitário sem IVA
     category: str
     source_note: str
+    # Campos descritivos para ligar à loja real (página, foto, descrição).
+    brand: str = ""
+    model: str = ""
+    cell_count: int = 108
+    image_url: Optional[str] = None
+    description: str = ""
 
 
 class PanelRecommendation(BaseModel):

@@ -46,6 +46,23 @@ class TestArchetypeSelection(unittest.TestCase):
         self.assertEqual(confidence, 0.0)
         self.assertFalse(fits)
 
+    def test_fallback_when_nothing_fits_area(self):
+        # Telhado minúsculo: nenhuma proposta cabe ⇒ confiança baixa, fits=False.
+        sols = _solutions(area=5.0)
+        self.assertEqual(len(sols), 3)
+        _, confidence, fits = select_recommended_archetype(sols, "custo")
+        self.assertFalse(fits)
+        self.assertLessEqual(confidence, 0.6)
+
+    def test_prefers_fitting_when_desired_does_not_fit(self):
+        # Área moderada: a preferida pode não caber mas escolhe-se uma que caiba.
+        sols = _solutions(area=18.0)
+        archetype, _, fits = select_recommended_archetype(sols, "eficiencia")
+        feasible = {s.archetype for s in sols if s.fits_in_area}
+        if feasible:
+            self.assertTrue(fits)
+            self.assertIn(archetype, feasible)
+
 
 class TestStructuredAnalysis(unittest.TestCase):
     def test_numbers_reflect_recommended(self):

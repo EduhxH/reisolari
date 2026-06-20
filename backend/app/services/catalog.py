@@ -328,6 +328,11 @@ async def get_panel_specs_from_products() -> list[PanelSpec]:
                 avg_price_eur=doc["price_cents"] / 100,
                 category=doc.get("category", ""),
                 source_note=f"{doc.get('brand', '')} {doc.get('model', '')} — catálogo Reisolari".strip(),
+                brand=doc.get("brand", ""),
+                model=doc.get("model", ""),
+                cell_count=doc.get("cell_count", 108),
+                image_url=doc.get("image_url"),
+                description=doc.get("description", ""),
             )
         )
     return specs

@@ -58,6 +58,24 @@ class TestRunSimulation(unittest.TestCase):
         with self.assertRaises(ValueError):
             run_questionnaire_simulation(q, [])
 
+    def test_budget_filter_keeps_three(self):
+        q = Questionnaire(
+            consumption_kwh=3500, region="sul", available_area_m2=40,
+            coverage=0.75, electricity_price_eur_kwh=0.20, budget_eur=100000,
+        )
+        result, _ = run_questionnaire_simulation(q, CATALOG)
+        self.assertEqual(len(result.solutions), 3)
+        for s in result.solutions:
+            self.assertLessEqual(s.fiscal_real["total_cost_with_vat"], 100000)
+
+    def test_budget_too_low_raises(self):
+        q = Questionnaire(
+            consumption_kwh=3500, region="sul", available_area_m2=40,
+            coverage=0.75, electricity_price_eur_kwh=0.20, budget_eur=10,
+        )
+        with self.assertRaises(ValueError):
+            run_questionnaire_simulation(q, CATALOG)
+
     def test_invalid_coverage_rejected(self):
         with self.assertRaises(ValueError):
             Questionnaire(consumption_kwh=3500, region="sul", coverage=0.6)

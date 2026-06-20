@@ -13,6 +13,7 @@ import {
   downloadOrcamento
 } from "@/lib/questionnaire";
 import { RevealStagger, RevealItem } from "@/components/Reveal";
+import PanelGraphic from "@/components/PanelGraphic";
 
 const money = (v: number | null | undefined) =>
   v == null ? "—" : new Intl.NumberFormat("pt-PT", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(v);
@@ -31,9 +32,11 @@ const SOURCE_BADGE: Record<string, string> = {
 };
 
 function SolutionCard({ s, recommended }: { s: SolutionArchetype; recommended: boolean }) {
+  const storeUrl = `/loja/${s.panel.code}`;
+  const vatBox = recommended ? "bg-white/10" : "bg-supaste-section";
   return (
     <article
-      className={`rounded-[26px] p-6 ${
+      className={`flex flex-col rounded-[26px] p-6 ${
         recommended ? "bg-supaste-black text-white" : "bg-white shadow-soft-float"
       }`}
     >
@@ -45,20 +48,67 @@ function SolutionCard({ s, recommended }: { s: SolutionArchetype; recommended: b
           </span>
         ) : null}
       </div>
-      <div className={`mt-1 text-xs ${recommended ? "text-white/60" : "text-supaste-muted"}`}>{s.panel.name}</div>
+
+      {/* Foto real do painel recomendado para este modo */}
+      <Link
+        href={storeUrl}
+        className="mt-4 grid h-32 place-items-center overflow-hidden rounded-2xl bg-white"
+        title={`Ver ${s.panel.name} na loja`}
+      >
+        {s.panel.image_url ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={s.panel.image_url} alt={s.panel.name} referrerPolicy="no-referrer" className="h-full w-full object-contain p-2" />
+        ) : (
+          <PanelGraphic
+            widthMm={s.panel.width_mm}
+            heightMm={s.panel.height_mm}
+            cellCount={s.panel.cell_count ?? 108}
+            powerW={s.panel.power_w}
+            className="h-28 w-auto"
+          />
+        )}
+      </Link>
+
+      <div className={`mt-3 text-sm font-semibold ${recommended ? "text-white" : "text-supaste-ink"}`}>{s.panel.name}</div>
+      <div className={`text-xs ${recommended ? "text-white/60" : "text-supaste-muted"}`}>
+        {money(s.panel.avg_price_eur)} / painel · sem IVA
+      </div>
+
       <dl className={`mt-4 space-y-2 text-sm ${recommended ? "text-white/90" : "text-supaste-ink"}`}>
         <Row recommended={recommended} label="Painéis" value={`${s.panels_feasible}`} />
         <Row recommended={recommended} label="Potência" value={`${s.installed_power_kwp.toFixed(2)} kWp`} />
         <Row recommended={recommended} label="Produção/ano" value={kwh(s.annual_production_kwh)} />
-        <Row recommended={recommended} label="Custo (IVA real)" value={money(s.fiscal_real.total_cost_with_vat)} />
-        <Row recommended={recommended} label="Custo (IVA guião)" value={money(s.fiscal_guiao.total_cost_with_vat)} muted />
-        <Row recommended={recommended} label="Retorno" value={years(s.fiscal_real.payback_years)} accent />
       </dl>
+
+      {/* Os 4 valores de IVA do sistema completo */}
+      <div className={`mt-4 space-y-1.5 rounded-2xl ${vatBox} p-3 text-[13px]`}>
+        <Row recommended={recommended} label="Sem IVA" value={money(s.fiscal_real.net_cost_eur)} muted />
+        <Row recommended={recommended} label="IVA reduzido" value={money(s.fiscal_reduzido.total_cost_with_vat)} />
+        <Row recommended={recommended} label="IVA real" value={money(s.fiscal_real.total_cost_with_vat)} accent />
+        <Row recommended={recommended} label="IVA guião" value={money(s.fiscal_guiao.total_cost_with_vat)} muted />
+        <p className={`pt-0.5 text-[10px] ${recommended ? "text-white/45" : "text-supaste-muted"}`}>
+          reduzido 6/5/4% · guião 23/22/16% · referência: IVA real
+        </p>
+      </div>
+
+      <dl className={`mt-3 space-y-2 text-sm ${recommended ? "text-white/90" : "text-supaste-ink"}`}>
+        <Row recommended={recommended} label="Retorno (real)" value={years(s.fiscal_real.payback_years)} accent />
+      </dl>
+
       {!s.fits_in_area ? (
         <p className={`mt-3 text-[11px] ${recommended ? "text-white/70" : "text-supaste-muted"}`}>
           Limitado pela área do telhado.
         </p>
       ) : null}
+
+      <Link
+        href={storeUrl}
+        className={`mt-5 inline-flex items-center justify-center rounded-full px-5 py-2.5 text-sm font-semibold transition-colors ${
+          recommended ? "bg-white text-supaste-black hover:bg-white/90" : "bg-supaste-black text-white hover:bg-black"
+        }`}
+      >
+        Ver / comprar na loja →
+      </Link>
     </article>
   );
 }

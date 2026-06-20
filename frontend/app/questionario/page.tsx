@@ -374,6 +374,25 @@ export default function QuestionarioPage() {
                 </label>
               ) : null}
 
+              <label className="flex flex-col gap-1.5 text-sm font-medium">
+                Orçamento máximo (€) — opcional
+                <input
+                  type="number"
+                  min={0}
+                  step={500}
+                  placeholder="Ex.: 4000 (deixe vazio para sem limite)"
+                  value={q.budget_eur ?? ""}
+                  onChange={e => {
+                    const v = parseFloat(e.target.value);
+                    set("budget_eur", Number.isFinite(v) && v > 0 ? v : null);
+                  }}
+                  className={inputClass}
+                />
+                <span className="text-xs text-supaste-muted">
+                  Mostramos apenas propostas cujo sistema completo (IVA real) caiba neste valor.
+                </span>
+              </label>
+
               {error ? (
                 <div className="rounded-2xl bg-[#fdecec] px-4 py-3 text-sm text-[#b42318]">{error}</div>
               ) : null}

@@ -55,15 +55,24 @@ class TestBuildSolutions(unittest.TestCase):
             economica.net_system_cost_eur, premium.net_system_cost_eur
         )
 
-    def test_both_vat_scenarios_present_and_ordered(self):
+    def test_three_vat_scenarios_present_and_ordered(self):
         for s in self.solutions:
+            self.assertIn("total_cost_with_vat", s.fiscal_reduzido)
             self.assertIn("total_cost_with_vat", s.fiscal_real)
             self.assertIn("total_cost_with_vat", s.fiscal_guiao)
+            # Sem bateria, reduzido e real coincidem (painéis sempre à taxa reduzida).
+            self.assertAlmostEqual(
+                s.fiscal_reduzido["total_cost_with_vat"],
+                s.fiscal_real["total_cost_with_vat"],
+                places=4,
+            )
             # Guião (IVA normal) custa mais que o real (IVA reduzido nos painéis).
             self.assertGreater(
                 s.fiscal_guiao["total_cost_with_vat"],
                 s.fiscal_real["total_cost_with_vat"],
             )
+            # O preço sem IVA é menor que qualquer total com IVA.
+            self.assertLess(s.fiscal_real["net_cost_eur"], s.fiscal_real["total_cost_with_vat"])
             self.assertGreater(s.co2_annual_kg, 0)
             self.assertGreater(s.annual_production_kwh, 0)
 
@@ -72,6 +81,24 @@ class TestBuildSolutions(unittest.TestCase):
             build_solutions([], annual_consumption_kwh=3500, coverage=0.75, region="sul"),
             [],
         )
+
+    def test_budget_filter_keeps_affordable(self):
+        # Orçamento alto: todas as propostas cabem.
+        sols = build_solutions(
+            CATALOG, annual_consumption_kwh=3500, coverage=0.75, region="sul",
+            available_area_m2=40.0, electricity_price_eur_kwh=0.20, budget_eur=100000,
+        )
+        self.assertEqual(len(sols), 3)
+        for s in sols:
+            self.assertLessEqual(s.fiscal_real["total_cost_with_vat"], 100000)
+
+    def test_budget_too_low_raises_with_cheapest(self):
+        with self.assertRaises(ValueError) as ctx:
+            build_solutions(
+                CATALOG, annual_consumption_kwh=3500, coverage=0.75, region="sul",
+                available_area_m2=40.0, electricity_price_eur_kwh=0.20, budget_eur=50,
+            )
+        self.assertIn("orçamento", str(ctx.exception).lower())
 
 
 if __name__ == "__main__":

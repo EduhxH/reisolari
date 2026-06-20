@@ -15,7 +15,7 @@ from typing import Optional
 
 from app.schemas.panel import PanelSpec
 from app.schemas.solution import Archetype, SolutionArchetype
-from app.services.fiscal import FiscalInput, FiscalResult, compute_fiscal_both
+from app.services.fiscal import FiscalInput, compute_fiscal_scenarios
 from app.services.solar_sizing import (
     apply_area_constraint,
     co2_avoided,
@@ -100,7 +100,7 @@ def _build_candidate(
         electricity_price_eur_kwh=electricity_price_eur_kwh,
         has_social_tariff=has_social_tariff,
     )
-    both = compute_fiscal_both(fiscal_input)
+    scenarios = compute_fiscal_scenarios(fiscal_input)
     co2 = co2_avoided(annual_production)
     lifetime_kwh = lifetime_energy_kwh(annual_production)
 
@@ -116,8 +116,9 @@ def _build_candidate(
         achievable_coverage=achievable_coverage,
         annual_production_kwh=annual_production,
         net_system_cost_eur=net_system_cost,
-        fiscal_real=both["real"].model_dump(),
-        fiscal_guiao=both["guiao"].model_dump(),
+        fiscal_reduzido=scenarios["reduzido"].model_dump(),
+        fiscal_real=scenarios["real"].model_dump(),
+        fiscal_guiao=scenarios["guiao"].model_dump(),
         co2_annual_kg=co2.annual_kg,
         co2_lifetime_kg=co2.lifetime_kg,
     )
@@ -140,11 +141,16 @@ def build_solutions(
     electricity_price_eur_kwh: float = 0.20,
     has_social_tariff: bool = False,
     battery_cost_eur: float = 0.0,
+    budget_eur: float | None = None,
 ) -> list[SolutionArchetype]:
     """Devolve as 3 soluções (económica, equilibrada, premium), nesta ordem.
 
     Escolhe módulos distintos quando possível; se o catálogo tiver poucos painéis,
     um módulo pode servir mais do que um arquétipo.
+
+    Se ``budget_eur`` for indicado, é um **filtro rígido**: só entram painéis cujo
+    sistema completo (IVA real) caiba no orçamento. Se nenhum couber, levanta
+    ``ValueError`` com o custo mínimo, para o utilizador poder ajustar o orçamento.
     """
     candidates = [
         c
@@ -165,6 +171,19 @@ def build_solutions(
     ]
     if not candidates:
         return []
+
+    # Filtro rígido de orçamento (custo total do sistema com IVA real).
+    if budget_eur is not None and budget_eur > 0:
+        affordable = [c for c in candidates if c.total_cost_real <= budget_eur]
+        if not affordable:
+            cheapest = min(c.total_cost_real for c in candidates)
+            raise ValueError(
+                f"Nenhuma proposta cabe no orçamento de {budget_eur:,.0f} €".replace(",", " ")
+                + f". A opção mais barata (sistema completo, IVA real) custa cerca de "
+                + f"{cheapest:,.0f} €".replace(",", " ")
+                + ". Aumente o orçamento ou reduza a autossuficiência pretendida."
+            )
+        candidates = affordable
 
     economica = min(candidates, key=lambda c: c.total_cost_real)
     premium = max(candidates, key=lambda c: (c.panel.efficiency, -c.solution.used_area_m2))

@@ -1,7 +1,7 @@
 "use client";
 
-import React, { Suspense, useMemo } from "react";
-import { Canvas } from "@react-three/fiber";
+import React, { Suspense, useMemo, useRef } from "react";
+import { Canvas, useFrame } from "@react-three/fiber";
 import { OrbitControls, Html, ContactShadows, useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 
@@ -52,8 +52,11 @@ function Annotation({
   label: string;
   value?: string;
 }) {
+  // Sem `occlude`: a etiqueta acompanha a face frontal e nunca "desaparece" quando
+  // o painel roda. A câmara está limitada à frente, por isso as etiquetas ficam
+  // sempre legíveis sobre o vidro.
   return (
-    <Html position={position} center occlude zIndexRange={[20, 0]}>
+    <Html position={position} center zIndexRange={[20, 0]}>
       <div className="pointer-events-none flex -translate-y-1/2 items-center gap-1.5">
         <span className="grid h-2 w-2 place-items-center rounded-full bg-supaste-blue ring-[3px] ring-supaste-blue/20" />
         <span className="h-px w-5 bg-supaste-blue/40" />
@@ -68,12 +71,24 @@ function Annotation({
 
 function Model() {
   const { obj, half } = useNormalizedModel();
+  const group = useRef<THREE.Group>(null);
   const front = half.z + 0.06;
+
+  // Oscilação lenta em torno de Y: o painel "respira" mantendo a frente para a
+  // câmara, sem nunca esconder as etiquetas. O lerp suave evita saltos.
+  useFrame(state => {
+    const g = group.current;
+    if (!g) return;
+    const target = Math.sin(state.clock.elapsedTime * 0.45) * 0.38;
+    g.rotation.y = THREE.MathUtils.lerp(g.rotation.y, target, 0.04);
+  });
+
   return (
-    <group>
+    <group ref={group}>
       <primitive object={obj} />
-      <Annotation position={[half.x * 0.1, half.y * 0.72, front]} label="Vidro temperado" />
-      <Annotation position={[half.x * 0.5, 0, front]} label="Células" value="N-TOPCon" />
+      <Annotation position={[half.x * 0.12, half.y * 0.74, front]} label="Vidro temperado" />
+      <Annotation position={[half.x * 0.5, half.y * 0.3, front]} label="Potência" value="445 Wp" />
+      <Annotation position={[half.x * 0.5, -half.y * 0.16, front]} label="Células" value="N-TOPCon" />
       <Annotation position={[-half.x * 0.45, -half.y * 0.74, front]} label="Moldura de alumínio" />
       <Annotation position={[-half.x * 0.55, half.y * 0.35, front]} label="Eficiência" value="22,8%" />
     </group>
@@ -82,7 +97,7 @@ function Model() {
 
 export default function SolarPanel3D() {
   return (
-    <Canvas camera={{ position: [1.4, 0.4, 3.6], fov: 30 }} dpr={[1, 2]} gl={{ antialias: true }}>
+    <Canvas camera={{ position: [1.1, 0.35, 3.7], fov: 30 }} dpr={[1, 2]} gl={{ antialias: true }}>
       <color attach="background" args={["#e8ecf2"]} />
       <ambientLight intensity={0.7} />
       <hemisphereLight intensity={0.5} groundColor="#b9c0cc" />
@@ -96,10 +111,12 @@ export default function SolarPanel3D() {
       <OrbitControls
         enablePan={false}
         enableZoom={false}
-        autoRotate
-        autoRotateSpeed={0.8}
-        minPolarAngle={Math.PI / 3}
-        maxPolarAngle={(2 * Math.PI) / 3}
+        enableDamping
+        dampingFactor={0.08}
+        minPolarAngle={Math.PI / 2.6}
+        maxPolarAngle={Math.PI / 1.7}
+        minAzimuthAngle={-Math.PI / 3.4}
+        maxAzimuthAngle={Math.PI / 3.4}
       />
     </Canvas>
   );
