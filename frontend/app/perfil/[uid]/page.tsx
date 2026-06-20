@@ -135,7 +135,7 @@ export default function PerfilPage({ params }: { params: { uid: string } }) {
         </Link>
       </div>
 
-      <div className="mx-auto max-w-4xl px-6">
+      <div className="relative z-10 mx-auto max-w-4xl px-6">
         {/* Header */}
         <Reveal className="-mt-14 rounded-[28px] bg-white p-6 shadow-soft-float">
           <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
