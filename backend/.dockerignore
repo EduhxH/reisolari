@@ -1,0 +1,17 @@
+env
+.env
+.env.*
+!.env.example
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+tests/
+e2e_*.py
+uploads/
+*.md
+.git/
+.venv/
+venv/

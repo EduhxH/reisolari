@@ -1,0 +1,70 @@
+# Stack de produção Reisolari — frontend + backend + MongoDB + Redis.
+#
+#   1. Preencha backend/.env       (a partir de backend/.env.example)
+#   2. Preencha .env (na raiz)     (a partir de .env.example — build-args do frontend)
+#   3. docker compose -f docker-compose.prod.yml up -d --build
+#
+# Coloque um reverse proxy (Caddy/Nginx/Traefik) à frente para TLS — ver DEPLOY.md.
+
+name: reisolari
+
+services:
+  mongodb:
+    image: mongo:7
+    restart: unless-stopped
+    volumes:
+      - mongodb_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+    restart: unless-stopped
+    env_file:
+      - ./backend/.env
+    # Força os endereços internos da rede do compose (precedência sobre o env_file).
+    environment:
+      MONGO_URI: mongodb://mongodb:27017
+      REDIS_URL: redis://redis:6379/0
+    volumes:
+      - uploads_data:/app/uploads
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        # Embebidos no bundle em build-time (lidos do .env da raiz).
+        NEXT_PUBLIC_BACKEND_URL: ${NEXT_PUBLIC_BACKEND_URL}
+        NEXT_PUBLIC_MAPBOX_TOKEN: ${NEXT_PUBLIC_MAPBOX_TOKEN}
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "3000:3000"
+
+volumes:
+  mongodb_data:
+  redis_data:
+  uploads_data:

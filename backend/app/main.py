@@ -10,6 +10,7 @@ from app.api.v1 import (
     seller, media, favorites, notifications, profiles, reports, questionnaire,
 )
 from app.websocket.stream_ws import router as stream_ws_router
+from app.core.config import settings
 from app.core.logging_config import setup_logging
 from app.db.mongo import init_indexes
 from app.services.catalog import seed_catalog, seed_product_images
@@ -45,16 +46,22 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Solar P2P Marketplace", version="1.0.0", lifespan=lifespan)
 
-origins = ["http://localhost:3000", "https://localhost:3000"]
-
+# Em dev aceitamos qualquer localhost (regex); em produção, apenas as origens
+# explícitas (FRONTEND_PUBLIC_URL + CORS_ORIGINS). Ver app/core/config.py.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
-    allow_origin_regex=r"https?://(localhost|127\.0\.0\.1)(:\d+)?",
+    allow_origins=settings.cors_origins,
+    allow_origin_regex=None if settings.is_production else r"https?://(localhost|127\.0\.0\.1)(:\d+)?",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.get("/health", tags=["health"])
+async def health() -> dict:
+    """Liveness/readiness probe para orquestradores e load balancers."""
+    return {"status": "ok", "environment": settings.ENVIRONMENT}
 
 app.include_router(auth.router, prefix="/api/v1/auth", tags=["auth"])
 app.include_router(listings.router, prefix="/api/v1/listings", tags=["listings"])
