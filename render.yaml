@@ -1,0 +1,63 @@
+# Render Blueprint — backend Reisolari (FastAPI) + Redis gerido.
+# MongoDB usa o Atlas (externo): define MONGO_URI no dashboard.
+# Importar em: Render → New → Blueprint → aponta para este repositório.
+
+services:
+  - type: web
+    name: reisolari-backend
+    runtime: docker
+    rootDir: backend
+    dockerfilePath: ./Dockerfile
+    plan: free            # nota: o disco persistente (uploads) exige um plano pago — ver abaixo
+    region: frankfurt
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: FIREBASE_PROJECT_ID
+        value: reisolari-92630
+      - key: ACCESS_TOKEN_EXPIRE_MINUTES
+        value: "1440"
+      - key: JWT_SECRET
+        generateValue: true          # o Render gera um segredo forte
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: reisolari-redis
+          property: connectionString
+      # Segredos / URLs — preenchidos no dashboard (sync:false não os guarda no git):
+      - key: MONGO_URI                # mongodb+srv://...  (MongoDB Atlas)
+        sync: false
+      - key: FRONTEND_PUBLIC_URL      # https://<o-teu-projeto>.vercel.app
+        sync: false
+      - key: BACKEND_PUBLIC_URL       # https://reisolari-backend.onrender.com
+        sync: false
+      - key: CORS_ORIGINS             # opcional: domínios extra (separados por vírgula)
+        sync: false
+      - key: MAPBOX_TOKEN
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: SERPAPI_API_KEY
+        sync: false
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+    # Uploads (faturas + imagens de anúncios) são efémeros no plano free.
+    # Para os tornar persistentes, muda `plan` para `starter` (ou superior) e
+    # descomenta o disco:
+    # disk:
+    #   name: uploads
+    #   mountPath: /app/uploads
+    #   sizeGB: 1
+
+  - type: keyvalue
+    name: reisolari-redis
+    plan: free
+    region: frankfurt
+    ipAllowList: []                   # só acessível dentro da rede do Render
+    maxmemoryPolicy: allkeys-lru
