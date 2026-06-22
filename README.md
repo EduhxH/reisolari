@@ -1,6 +1,7 @@
-<div align="center">
 
 # REISOLARI
+
+<div align="center">
 
 [![Next.js](https://img.shields.io/badge/Next.js-000000?style=for-the-badge&logo=nextdotjs&logoColor=white)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
@@ -199,21 +200,6 @@ cp .env.example .env            # fill in all keys
 uvicorn app.main:app --reload
 ```
 
-**3. Frontend setup**
-
-```bash
-cd ../frontend
-pnpm install
-cp .env.example .env.local      # fill in all keys
-pnpm dev
-```
-
-**4. Stripe webhook (local)**
-
-```bash
-stripe listen --forward-to localhost:8000/api/v1/payments/webhook
-```
-
 ---
 
 ## ⚙️ Configuration
@@ -248,7 +234,7 @@ NEXT_PUBLIC_API_URL=http://localhost:8000
 
 ---
 
-## 📁 Project Structure
+## 📂 Project Structure
 
 ```
 reisolari/
@@ -257,45 +243,58 @@ reisolari/
 │   │   ├── main.py                  # FastAPI entry point
 │   │   ├── core/
 │   │   │   ├── config.py            # pydantic-settings environment config
-│   │   │   ├── database.py          # Motor async MongoDB connection + 2dsphere index setup
-│   │   │   └── security.py          # bcrypt password hashing (passlib)
+│   │   │   ├── security.py          # Security and JWT utilities
+│   │   │   └── logging_config.py    # Backend logging configuration
+│   │   ├── db/
+│   │   │   ├── mongo.py             # Motor async MongoDB connection
+│   │   │   └── redis.py             # Redis connection and Pub/Sub setup
 │   │   ├── agents/
-│   │   │   ├── orchestrator.py      # Orchestrator agent — parallel dispatch + consolidation
-│   │   │   ├── physical_analyst.py  # Sub-Agent 1: physical-chemical analysis
-│   │   │   ├── financial_analyst.py # Sub-Agent 2: financial & fiscal analysis
-│   │   │   ├── sustainability.py    # Sub-Agent 3: CO₂ impact + Solar Window strategy
-│   │   │   └── schemas.py           # Pydantic v2 schemas for agent output (JSON Mode)
-│   │   ├── api/
-│   │   │   ├── simulation.py        # POST /api/v1/simulate — physics + agent pipeline
-│   │   │   ├── listings.py          # CRUD for solar system marketplace listings
-│   │   │   ├── payments.py          # Stripe Checkout Session + webhook handler
-│   │   │   ├── chat.py              # WebSocket endpoint + Redis Pub/Sub
-│   │   │   └── auth.py              # User registration / login
+│   │   │   ├── orchestrator.py      # Multi-agent orchestrator logic
+│   │   │   ├── agent_physics.py     # Sub-Agent: Physical-Chemical analysis
+│   │   │   ├── agent_finance.py     # Sub-Agent: Financial & Fiscal analysis
+│   │   │   ├── agent_sustainability.py # Sub-Agent: CO₂ and sustainability
+│   │   │   └── agent_sourcing.py    # Sub-Agent: Panel sourcing and catalog
+│   │   ├── api/v1/
+│   │   │   ├── simulation.py        # Solar simulation endpoints
+│   │   │   ├── listings.py          # Marketplace listing CRUD
+│   │   │   ├── auth.py              # Authentication and registration
+│   │   │   ├── payments.py          # Stripe Connect and payments
+│   │   │   ├── chat.py              # Chat and messaging API
+│   │   │   └── questionnaire.py     # User needs assessment questionnaire
 │   │   ├── models/
-│   │   │   ├── user.py              # User Pydantic schema (GeoJSON Point)
-│   │   │   ├── listing.py           # Listing schema (electrical specs + GeoJSON Polygon)
-│   │   │   └── simulation.py        # Simulation result schema
-│   │   └── services/
-│   │       ├── pvgis.py             # httpx async call to PVGIS EU Commission API
-│   │       ├── geoip.py             # ipapi.co GeoIP with X-Forwarded-For handling
-│   │       └── physics.py           # E = A × r × H × PR engine + fiscal logic
+│   │   │   ├── user.py              # User database models
+│   │   │   ├── listing.py           # Marketplace listing models
+│   │   │   └── payment.py           # Payment and transaction models
+│   │   ├── schemas/
+│   │   │   ├── simulation.py        # Pydantic schemas for simulation
+│   │   │   ├── listing.py           # Pydantic schemas for listings
+│   │   │   └── user.py              # Pydantic schemas for users
+│   │   ├── services/
+│   │   │   ├── physics.py           # Core energy calculation engine
+│   │   │   ├── fiscal.py            # Portuguese fiscal and VAT logic
+│   │   │   ├── pvgis.py             # PVGIS API integration
+│   │   │   └── stripe_service.py    # Stripe API business logic
+│   │   └── websocket/
+│   │       ├── chat_ws.py           # Real-time chat WebSocket handler
+│   │       └── stream_ws.py         # AI response streaming WebSocket
 │   ├── requirements.txt
 │   └── .env.example
 ├── frontend/
 │   ├── app/
-│   │   ├── layout.tsx
 │   │   ├── page.tsx                 # Landing page
-│   │   ├── simulate/
-│   │   │   └── page.tsx             # Map + simulation form
-│   │   └── dashboard/
-│   │       └── page.tsx             # AI analysis dashboard
+│   │   ├── login/                   # User login page
+│   │   ├── criar-conta/             # User registration page
+│   │   ├── questionario/            # Interactive needs assessment
+│   │   ├── marketplace/             # Solar marketplace browse and search
+│   │   ├── dashboard/               # User and seller dashboard
+│   │   ├── perfil/                  # User profile management
+│   │   └── mensagens/               # Real-time chat interface
 │   ├── components/
-│   │   ├── RoofMapDrawer.tsx        # Mapbox GL Draw + Turf.js area calculator
-│   │   ├── SimulationDashboard.tsx  # Physics results + per-agent AI analysis cards
-│   │   ├── GdprConsentCheckbox.tsx  # Explicit GDPR consent before data capture
-│   │   └── ChatWidget.tsx           # P2P real-time WebSocket chat
+│   │   ├── RoofMapDrawer.tsx        # Mapbox GL Draw roof polygon tool
+│   │   ├── SimulationDashboard.tsx  # Simulation results visualization
+│   │   └── ChatWidget.tsx           # Real-time messaging component
 │   ├── lib/
-│   │   └── api.ts                   # Typed fetch client for all backend endpoints
+│   │   └── api.ts                   # Backend API client utilities
 │   ├── package.json
 │   └── .env.example
 └── README.md
@@ -345,22 +344,22 @@ Browser (Next.js 14)
 ## 🗺️ Roadmap
 
 - [x] Monorepo structure (`backend/` + `frontend/`)
-- [ ] Motor + MongoDB Atlas connection with 2dsphere indexes
-- [ ] GeoIP detection with `X-Forwarded-For` parsing
-- [ ] PVGIS async integration with `httpx.AsyncClient`
-- [ ] Physics engine: `E = A × r × H × PR` with fiscal branches
-- [ ] Sub-Agent 1: Physical-Chemical Analyst
-- [ ] Sub-Agent 2: Financial & Fiscal Specialist
-- [ ] Sub-Agent 3: Sustainable Viability Consultant
-- [ ] Orchestrator with parallel dispatch and Pydantic JSON Mode output
-- [ ] Stripe Connect Checkout Session (8% platform fee split)
-- [ ] Stripe webhook with ACID MongoDB transaction
-- [ ] WebSocket chat with Redis Pub/Sub + MongoDB `$push`
-- [ ] Mapbox satellite map with GL Draw polygon tool
-- [ ] Turf.js area calculation and coordinate extraction
-- [ ] GDPR consent checkbox before data capture
-- [ ] AI analysis dashboard (physics data + per-agent cards)
-- [ ] bcrypt authentication with passlib
+- [x] Motor + MongoDB Atlas connection with 2dsphere indexes
+- [x] GeoIP detection with `X-Forwarded-For` parsing
+- [x] PVGIS async integration with `httpx.AsyncClient`
+- [x] Physics engine: `E = A × r × H × PR` with fiscal branches
+- [x] Sub-Agent 1: Physical-Chemical Analyst
+- [x] Sub-Agent 2: Financial & Fiscal Specialist
+- [x] Sub-Agent 3: Sustainable Viability Consultant
+- [x] Orchestrator with parallel dispatch and Pydantic JSON Mode output
+- [x] Stripe Connect Checkout Session (8% platform fee split)
+- [x] Stripe webhook with ACID MongoDB transaction
+- [x] WebSocket chat with Redis Pub/Sub + MongoDB `$push`
+- [x] Mapbox satellite map with GL Draw polygon tool
+- [x] Turf.js area calculation and coordinate extraction
+- [x] GDPR consent checkbox before data capture
+- [x] AI analysis dashboard (physics data + per-agent cards)
+- [x] bcrypt authentication with passlib
 
 ---
 
@@ -379,7 +378,7 @@ Browser (Next.js 14)
 - **PVGIS API and photovoltaic science** — understanding the physical meaning of irradiation (kWh/m²/year), Performance Ratio, and panel efficiency, and integrating real EU Commission solar data into a production application.
 - **Multi-agent AI orchestration** — designing an async Python pipeline where a manager agent dispatches specialist sub-agents in parallel and consolidates structured outputs using LangGraph and Pydantic JSON Mode.
 - **Geospatial data in MongoDB** — working with GeoJSON Point and Polygon schemas, creating 2dsphere indexes, and running geospatial queries in Atlas.
-- **Stripe Connect split payments** — implementing `application_fee_amount` and `transfer_data.destination` for marketplace fee collection, and validating webhook signatures for production-safe event handling.
+- **Stripe Connect split payments** — implementing `application_fee_amount` (8% platform fee) and `transfer_data.destination` for marketplace fee collection, and validating webhook signatures for production-safe event handling.
 - **ACID transactions in MongoDB** — using `session.start_transaction()` to atomically update a listing status and create an invoice within a single consistent operation.
 - **Redis Pub/Sub for WebSockets** — building a scalable real-time chat system where FastAPI WebSocket handlers subscribe to Redis channels, decoupled from each other and from the HTTP layer.
 - **Portuguese fiscal complexity** — mapping the exact VAT rates across three tax regions (Continente, Madeira, Açores) for two product categories, and applying the Tarifa Social de Energia discount correctly in payback calculations.
