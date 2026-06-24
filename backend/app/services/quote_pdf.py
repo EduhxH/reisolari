@@ -367,6 +367,55 @@ def build_quote_pdf(record: Dict[str, Any]) -> bytes:
     story.append(proposals)
     story.append(Spacer(1, 10))
 
+    # --- Como o IVA foi aplicado (caso específico) ---
+    if recommended:
+        fr = recommended.get("fiscal_real", {})
+        fred = recommended.get("fiscal_reduzido", {})
+        fg = recommended.get("fiscal_guiao", {})
+        std = (fg.get("vat_panels_rate") or 0) * 100
+        red = (fr.get("vat_panels_rate") or 0) * 100
+        wants_batt = bool(questionnaire.get("wants_battery"))
+        batt_net = (questionnaire.get("battery_cost_eur") or 0) if wants_batt else 0
+        panels_net = (fr.get("net_cost_eur") or 0) - batt_net
+        story.append(Paragraph("Como o IVA foi aplicado (caso específico)", h2))
+        intro = (
+            f"O IVA incide <b>apenas sobre o preço dos painéis</b>"
+            + (" e da bateria" if wants_batt else "")
+            + " — não inclui mão de obra, cabos nem qualquer outro custo. "
+            + f"Painéis sem IVA: <b>{_money(panels_net)}</b>"
+            + (f"; bateria sem IVA: <b>{_money(batt_net)}</b>." if wants_batt else ".")
+            + f" Na região <b>{region}</b>, a taxa normal de IVA é <b>{std:.0f}%</b> e a taxa "
+            + f"reduzida para painéis de autoconsumo é <b>{red:.0f}%</b> (Verba 2.34 da Lista I do CIVA)."
+        )
+        story.append(Paragraph(intro, body))
+        iva_rows = [
+            ["Cenário", "Taxa aplicada", "Total a pagar"],
+            ["Sem IVA", "—", _money(fr.get("net_cost_eur"))],
+            ["IVA reduzido", f"tudo a {red:.0f}%", _money(fred.get("total_cost_with_vat"))],
+            ["IVA real (referência)",
+             f"painéis {red:.0f}%" + (f" + bateria {std:.0f}%" if wants_batt else ""),
+             _money(fr.get("total_cost_with_vat"))],
+            ["IVA guião", f"tudo a {std:.0f}%", _money(fg.get("total_cost_with_vat"))],
+        ]
+        iva_t = Table(iva_rows, colWidths=[44 * mm, content_width - 94 * mm, 50 * mm])
+        iva_t.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, 0), brand),
+            ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+            ("FONTSIZE", (0, 0), (-1, -1), 8.5),
+            ("GRID", (0, 0), (-1, -1), 0.4, line),
+            ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, section_bg]),
+            ("BACKGROUND", (0, 3), (-1, 3), colors.HexColor("#eaf2ff")),
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ("TOPPADDING", (0, 0), (-1, -1), 4),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+            ("LEFTPADDING", (0, 0), (-1, -1), 6),
+        ]))
+        story.append(iva_t)
+        story.append(Paragraph(
+            "A bateria, quando incluída, não beneficia da taxa reduzida — fica sempre à taxa normal. "
+            "Os indicadores de retorno (payback, VAL, TIR) usam o cenário <b>IVA real</b>.", small))
+        story.append(Spacer(1, 10))
+
     # --- Resultados da análise (números, sem texto dos agentes) ---
     story.append(Paragraph("Resultados da análise", h2))
     physics = analysis.get("physics", {})

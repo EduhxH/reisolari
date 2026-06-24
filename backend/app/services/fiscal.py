@@ -36,7 +36,7 @@ class FiscalResult(BaseModel):
     scenario_label: str
     vat_panels_rate: float
     vat_battery_rate: float
-    net_cost_eur: float                  # preço sem IVA (painéis + BOS + bateria)
+    net_cost_eur: float                  # preço sem IVA (apenas painéis + bateria)
     vat_amount_eur: float                # IVA total cobrado neste cenário
     total_cost_with_vat: float
     effective_electricity_price_eur_kwh: float

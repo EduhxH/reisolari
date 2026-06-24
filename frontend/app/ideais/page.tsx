@@ -321,6 +321,40 @@ export default function IdeaisPage() {
           </RevealStagger>
         </section>
 
+        {/* IVA — transparência total */}
+        {rec ? (
+          <section className="rounded-[26px] bg-white p-6 shadow-soft-float">
+            <h2 className="font-display text-xl font-semibold tracking-tight">IVA — transparência total</h2>
+            <p className="mt-2 max-w-3xl text-sm leading-relaxed text-supaste-muted">
+              O IVA aplica-se <span className="font-semibold text-supaste-ink">só ao preço dos painéis</span> (e da bateria,
+              se incluída) — não inclui mão de obra nem cabos. Na sua região a taxa normal é{" "}
+              <span className="font-semibold text-supaste-ink">{(rec.fiscal_guiao.vat_panels_rate * 100).toFixed(0)}%</span> e a
+              taxa reduzida para painéis de autoconsumo é{" "}
+              <span className="font-semibold text-supaste-ink">{(rec.fiscal_real.vat_panels_rate * 100).toFixed(0)}%</span>{" "}
+              (Verba 2.34 da Lista I do CIVA).
+            </p>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              {[
+                { c: "Sem IVA", t: "preço líquido dos painéis", v: rec.fiscal_real.net_cost_eur, hl: false },
+                { c: "IVA reduzido", t: `tudo a ${(rec.fiscal_real.vat_panels_rate * 100).toFixed(0)}%`, v: rec.fiscal_reduzido.total_cost_with_vat, hl: false },
+                { c: "IVA real (referência)", t: `painéis ${(rec.fiscal_real.vat_panels_rate * 100).toFixed(0)}% + bateria ${(rec.fiscal_guiao.vat_panels_rate * 100).toFixed(0)}%`, v: rec.fiscal_real.total_cost_with_vat, hl: true },
+                { c: "IVA guião", t: `tudo a ${(rec.fiscal_guiao.vat_panels_rate * 100).toFixed(0)}%`, v: rec.fiscal_guiao.total_cost_with_vat, hl: false }
+              ].map(card => (
+                <div key={card.c} className={`rounded-2xl p-4 ${card.hl ? "bg-supaste-black text-white" : "bg-supaste-section"}`}>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm font-semibold">{card.c}</span>
+                    <span className={`text-lg font-bold ${card.hl ? "text-white" : "text-supaste-blue"}`}>{money(card.v)}</span>
+                  </div>
+                  <div className={`mt-0.5 text-xs ${card.hl ? "text-white/70" : "text-supaste-muted"}`}>{card.t}</div>
+                </div>
+              ))}
+            </div>
+            <p className="mt-3 text-xs text-supaste-muted">
+              A bateria, quando incluída, fica sempre à taxa normal (não tem reduzida). Os indicadores de retorno usam o cenário IVA real.
+            </p>
+          </section>
+        ) : null}
+
         {/* Painéis reais à venda */}
         <section className="space-y-4">
           <h2 className="font-display text-xl font-semibold tracking-tight">Painéis reais à venda em Portugal</h2>

@@ -24,10 +24,9 @@ from app.services.solar_sizing import (
     size_system,
 )
 
-# Custo do balanço do sistema (inversor + estrutura + mão de obra), líquido de IVA,
-# por kWp instalado. Soma-se ao custo dos módulos do catálogo para um custo de
-# sistema realista. Constante única e auditável.
-BOS_COST_PER_KWP_EUR = 450.0
+# Conforme o guião, o custo do sistema é APENAS o preço dos painéis (a tabela
+# PaineisSolares só tem `preco`). Não se incluem inversor, estrutura, cabos nem
+# mão de obra — só os módulos.
 
 ARCHETYPE_LABELS: dict[Archetype, str] = {
     "economica": "Económica — menor custo",
@@ -89,8 +88,8 @@ def _build_candidate(
 
     installed_kwp = panels_feasible * panel.power_w / 1000
     annual_production = installed_kwp * sizing.region_yield_kwh_kwp_year
-    equipment_cost = panels_feasible * panel.avg_price_eur
-    net_system_cost = equipment_cost + installed_kwp * BOS_COST_PER_KWP_EUR
+    # Custo do sistema = APENAS painéis (preço do módulo × nº), conforme o guião.
+    net_system_cost = panels_feasible * panel.avg_price_eur
 
     fiscal_input = FiscalInput(
         region=region_to_fiscal(region),
