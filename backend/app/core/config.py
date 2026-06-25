@@ -17,7 +17,12 @@ class Settings(BaseSettings):
     FRONTEND_PUBLIC_URL: str = "http://localhost:3000"
     BACKEND_PUBLIC_URL: str = "http://localhost:8000"
     FIREBASE_PROJECT_ID: str = "reisolari-92630"
-    FIREBASE_WEB_API_KEY: str = ""
+    # Public Firebase Web API key (same value shipped in the frontend bundle).
+    # Sent as X-goog-api-key when fetching Google's JWKS so the request is
+    # attributed to this project instead of hitting the anonymous per-IP quota
+    # — that anonymous quota is what returns 403 on datacenter IPs (e.g. Render).
+    # Overridable via the FIREBASE_WEB_API_KEY env var.
+    FIREBASE_WEB_API_KEY: str = "AIzaSyBS1j_fiUCNn3yMMT52ZgE494E7x0LcUSg"
     MAPBOX_TOKEN: str = ""
     # Comma-separated Firebase uids allowed into the moderation area.
     ADMIN_UIDS: str = ""
