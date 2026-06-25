@@ -16,6 +16,22 @@ async def init_indexes() -> None:
     client = get_db_client()
     db = client.solar_p2p
 
+    # Migração: remove índices obsoletos do chat_rooms de um esquema antigo que
+    # usava buyer_id/seller_id (o atual usa buyer_uid/seller_uid). Sem isto, os
+    # documentos novos — que não têm buyer_id/seller_id — colidem em
+    # (listing_id, null, null) no índice único antigo (DuplicateKeyError).
+    try:
+        info = await db.chat_rooms.index_information()
+        for name, meta in info.items():
+            if name == "_id_":
+                continue
+            keys = [field for field, _ in meta.get("key", [])]
+            if "buyer_id" in keys or "seller_id" in keys:
+                await db.chat_rooms.drop_index(name)
+    except Exception:
+        # Coleção/índice inexistente ou já limpo — ignora.
+        pass
+
     await db.users.create_index([("email", ASCENDING)], unique=True)
     await db.listings.create_index([("location", GEOSPHERE)])
     await db.listings.create_index([("roof_polygon", GEOSPHERE)])
