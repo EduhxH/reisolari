@@ -17,6 +17,7 @@ class Settings(BaseSettings):
     FRONTEND_PUBLIC_URL: str = "http://localhost:3000"
     BACKEND_PUBLIC_URL: str = "http://localhost:8000"
     FIREBASE_PROJECT_ID: str = "reisolari-92630"
+    FIREBASE_WEB_API_KEY: str = ""
     MAPBOX_TOKEN: str = ""
     # Comma-separated Firebase uids allowed into the moderation area.
     ADMIN_UIDS: str = ""

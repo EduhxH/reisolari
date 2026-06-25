@@ -38,8 +38,12 @@ async def _get_jwks() -> list[dict]:
     if _jwks_cache["keys"] and _jwks_cache["expires_at"] > now:
         return _jwks_cache["keys"]
 
+    headers = {}
+    if settings.FIREBASE_WEB_API_KEY:
+        headers["X-goog-api-key"] = settings.FIREBASE_WEB_API_KEY
+
     async with httpx.AsyncClient(timeout=10.0) as client:
-        resp = await client.get(FIREBASE_JWKS_URL)
+        resp = await client.get(FIREBASE_JWKS_URL, headers=headers)
         resp.raise_for_status()
         keys = resp.json().get("keys", [])
 
