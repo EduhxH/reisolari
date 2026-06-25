@@ -1,6 +1,18 @@
 import React from "react";
 import Link from "next/link";
+import Image from "next/image";
 import type { Metadata } from "next";
+import {
+  AlertTriangle,
+  ArrowLeft,
+  Lock,
+  MapPin,
+  MessageCircle,
+  ShieldCheck,
+  Tag,
+  Wallet,
+  type LucideIcon
+} from "lucide-react";
 
 export const metadata: Metadata = {
   title: "Diretrizes de Segurança · Reisolari",
@@ -8,9 +20,12 @@ export const metadata: Metadata = {
     "Como comprar e vender painéis solares em segurança na Reisolari e evitar burlas."
 };
 
-const SECTIONS: { title: string; body: string; items: string[] }[] = [
+type Section = { icon: LucideIcon; title: string; body: string; items: string[] };
+
+const SECTIONS: Section[] = [
   {
-    title: "1. Mantenha a conversa e o pagamento na plataforma",
+    icon: MessageCircle,
+    title: "Mantenha a conversa e o pagamento na plataforma",
     body: "Toda a negociação deve acontecer no chat da Reisolari. É o único sítio onde conseguimos ajudar em caso de problema.",
     items: [
       "Desconfie de quem pede para falar por WhatsApp, Telegram, SMS, email ou telefone.",
@@ -19,7 +34,8 @@ const SECTIONS: { title: string; body: string; items: string[] }[] = [
     ]
   },
   {
-    title: "2. Nunca pague adiantado a desconhecidos",
+    icon: Wallet,
+    title: "Nunca pague adiantado a desconhecidos",
     body: "Pagamentos antecipados sem garantias são a principal forma de fraude em marketplaces.",
     items: [
       "Não envie dinheiro antes de confirmar que o produto existe e está como descrito.",
@@ -28,7 +44,8 @@ const SECTIONS: { title: string; body: string; items: string[] }[] = [
     ]
   },
   {
-    title: "3. Desconfie de preços bons demais",
+    icon: Tag,
+    title: "Desconfie de preços bons demais",
     body: "Um painel ou inversor muito abaixo do mercado costuma ser isco para um esquema.",
     items: [
       "Compare com outros anúncios semelhantes antes de avançar.",
@@ -37,7 +54,8 @@ const SECTIONS: { title: string; body: string; items: string[] }[] = [
     ]
   },
   {
-    title: "4. Proteja os seus dados",
+    icon: ShieldCheck,
+    title: "Proteja os seus dados",
     body: "Os seus dados pessoais e bancários nunca são necessários para negociar.",
     items: [
       "Não partilhe NIF, IBAN, morada exata, fotos de documentos ou dados de cartão.",
@@ -46,7 +64,8 @@ const SECTIONS: { title: string; body: string; items: string[] }[] = [
     ]
   },
   {
-    title: "5. Encontros e entregas em segurança",
+    icon: MapPin,
+    title: "Encontros e entregas em segurança",
     body: "Para negócios presenciais, escolha sempre locais públicos e movimentados.",
     items: [
       "Combine em locais com câmaras (estações, centros comerciais, esquadras com ponto de troca).",
@@ -55,7 +74,8 @@ const SECTIONS: { title: string; body: string; items: string[] }[] = [
     ]
   },
   {
-    title: "6. Sinais de alerta",
+    icon: AlertTriangle,
+    title: "Sinais de alerta",
     body: "Termine a conversa e denuncie se encontrar qualquer um destes sinais:",
     items: [
       "Pedido para sair da plataforma ou pagar por fora.",
@@ -68,42 +88,79 @@ const SECTIONS: { title: string; body: string; items: string[] }[] = [
 
 export default function DiretrizesPage() {
   return (
-    <main className="min-h-screen bg-supaste-mist text-supaste-ink p-6">
-      <div className="max-w-3xl mx-auto space-y-6">
-        <header className="flex items-center justify-between border-b border-black/10 pb-4">
-          <div>
-            <h1 className="text-2xl font-bold text-supaste-ink">Diretrizes de Segurança</h1>
-            <p className="text-sm text-supaste-muted">
-              Como comprar e vender em segurança na Reisolari e evitar burlas.
-            </p>
-          </div>
-          <Link href="/marketplace" className="text-xs font-semibold text-supaste-muted hover:text-supaste-blue">
-            ← Marketplace
+    <main className="min-h-screen bg-supaste-mist pb-16 text-supaste-ink">
+      <header className="px-4 pt-5">
+        <nav className="supaste-glass-strong mx-auto flex max-w-3xl items-center justify-between rounded-full px-4 py-2.5">
+          <Link href="/" className="flex items-center gap-2.5">
+            <Image src="/images/reisolari-logo.jpeg" alt="Reisolari" width={30} height={30} className="rounded-full" />
+            <span className="font-display text-base font-semibold tracking-tight">Reisolari</span>
           </Link>
-        </header>
+          <Link
+            href="/marketplace"
+            className="flex items-center gap-1.5 text-sm font-medium text-supaste-muted transition-colors hover:text-supaste-ink"
+          >
+            <ArrowLeft className="h-4 w-4" /> Marketplace
+          </Link>
+        </nav>
+      </header>
 
-        <div className="rounded-lg border border-supaste-green/30 bg-supaste-black/5 p-4 text-sm text-supaste-blue">
-          🔒 Regra de ouro: <strong>mantenha tudo dentro da Reisolari</strong>. Conversas e
-          pagamentos fora da plataforma não podem ser protegidos por nós.
+      <div className="mx-auto max-w-3xl space-y-7 px-6 py-10">
+        {/* Hero */}
+        <div className="space-y-3">
+          <p className="font-mono text-xs uppercase tracking-[0.2em] text-supaste-blue">Segurança</p>
+          <h1 className="font-display text-3xl font-semibold tracking-tight md:text-4xl text-balance">
+            Diretrizes de <span className="font-serif italic font-normal">segurança</span>
+          </h1>
+          <p className="text-base text-supaste-muted text-balance">
+            Como comprar e vender em segurança na Reisolari e evitar burlas.
+          </p>
         </div>
 
-        <div className="space-y-5">
-          {SECTIONS.map(section => (
-            <section key={section.title} className="rounded-xl border border-black/10 bg-white p-5 space-y-2">
-              <h2 className="text-base font-semibold text-supaste-ink">{section.title}</h2>
-              <p className="text-sm text-supaste-muted">{section.body}</p>
-              <ul className="list-disc pl-5 space-y-1 text-sm text-supaste-muted">
-                {section.items.map(item => (
-                  <li key={item}>{item}</li>
-                ))}
-              </ul>
-            </section>
-          ))}
+        {/* Regra de ouro */}
+        <div className="flex items-start gap-3.5 rounded-[22px] border border-supaste-blue/15 bg-supaste-blue/5 p-5">
+          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-supaste-blue/10 text-supaste-blue">
+            <Lock className="h-5 w-5" />
+          </span>
+          <p className="text-sm leading-relaxed text-supaste-ink">
+            <span className="font-semibold">Regra de ouro: mantenha tudo dentro da Reisolari.</span>{" "}
+            <span className="text-supaste-muted">
+              Conversas e pagamentos fora da plataforma não podem ser protegidos por nós.
+            </span>
+          </p>
         </div>
 
-        <p className="text-[11px] text-supaste-muted">
-          Encontrou um comportamento suspeito? Termine a conversa e evite qualquer pagamento.
-          Estas diretrizes existem para o proteger — ao usar a Reisolari, concorda em segui-las.
+        {/* Secções */}
+        <div className="space-y-4">
+          {SECTIONS.map((section, i) => {
+            const Icon = section.icon;
+            return (
+              <section key={section.title} className="rounded-[26px] bg-white p-6 shadow-soft-float">
+                <div className="flex items-center gap-3.5">
+                  <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-supaste-section text-supaste-blue">
+                    <Icon className="h-5 w-5" />
+                  </span>
+                  <div className="min-w-0">
+                    <div className="font-mono text-[11px] text-supaste-muted">0{i + 1}</div>
+                    <h2 className="font-display text-lg font-semibold leading-tight tracking-tight">{section.title}</h2>
+                  </div>
+                </div>
+                <p className="mt-4 text-sm leading-relaxed text-supaste-muted">{section.body}</p>
+                <ul className="mt-3 space-y-2">
+                  {section.items.map(item => (
+                    <li key={item} className="flex items-start gap-2.5 text-sm leading-relaxed text-supaste-muted">
+                      <span className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-supaste-blue/50" />
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            );
+          })}
+        </div>
+
+        <p className="px-1 text-xs leading-relaxed text-supaste-muted">
+          Encontrou um comportamento suspeito? Termine a conversa e evite qualquer pagamento. Estas
+          diretrizes existem para o proteger — ao usar a Reisolari, concorda em segui-las.
         </p>
       </div>
     </main>
