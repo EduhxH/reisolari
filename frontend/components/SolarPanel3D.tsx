@@ -1,7 +1,7 @@
 "use client";
 
-import React, { Suspense, useMemo, useRef } from "react";
-import { Canvas, useFrame } from "@react-three/fiber";
+import React, { Suspense, useMemo } from "react";
+import { Canvas } from "@react-three/fiber";
 import { OrbitControls, Html, ContactShadows, useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 
@@ -71,20 +71,10 @@ function Annotation({
 
 function Model() {
   const { obj, half } = useNormalizedModel();
-  const group = useRef<THREE.Group>(null);
   const front = half.z + 0.06;
 
-  // Oscilação lenta em torno de Y: o painel "respira" mantendo a frente para a
-  // câmara, sem nunca esconder as etiquetas. O lerp suave evita saltos.
-  useFrame(state => {
-    const g = group.current;
-    if (!g) return;
-    const target = Math.sin(state.clock.elapsedTime * 0.45) * 0.38;
-    g.rotation.y = THREE.MathUtils.lerp(g.rotation.y, target, 0.04);
-  });
-
   return (
-    <group ref={group}>
+    <group>
       <primitive object={obj} />
       <Annotation position={[half.x * 0.12, half.y * 0.74, front]} label="Vidro temperado" />
       <Annotation position={[half.x * 0.5, half.y * 0.3, front]} label="Potência" value="445 Wp" />
@@ -113,10 +103,10 @@ export default function SolarPanel3D() {
         enableZoom={false}
         enableDamping
         dampingFactor={0.08}
+        autoRotate
+        autoRotateSpeed={1.1}
         minPolarAngle={Math.PI / 2.6}
         maxPolarAngle={Math.PI / 1.7}
-        minAzimuthAngle={-Math.PI / 3.4}
-        maxAzimuthAngle={Math.PI / 3.4}
       />
     </Canvas>
   );
