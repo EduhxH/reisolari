@@ -10,9 +10,10 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Literal, Optional
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from app.schemas.solution import SolutionArchetype
+from app.services.questionnaire_validation import hard_limit_error
 from app.services.solar_sizing import ALLOWED_COVERAGE
 
 Region = Literal["norte", "centro", "sul", "madeira", "acores"]
@@ -56,6 +57,25 @@ class Questionnaire(BaseModel):
         if round(value, 2) not in ALLOWED_COVERAGE:
             raise ValueError(f"Cobertura tem de ser uma de {ALLOWED_COVERAGE}")
         return round(value, 2)
+
+    @model_validator(mode="after")
+    def _within_realistic_bounds(self) -> "Questionnaire":
+        """Recusa dados impossíveis (absurdos/irreais). Os valores possíveis mas
+        fora do normal não são bloqueados aqui — o frontend mostra para esses uma
+        confirmação "tens a certeza?" (ver ``soft_warnings``)."""
+        error = hard_limit_error(
+            consumption_kwh=self.consumption_kwh,
+            consumption_period=self.consumption_period,
+            available_area_m2=self.available_area_m2,
+            electricity_price_eur_kwh=self.electricity_price_eur_kwh,
+            wants_battery=self.wants_battery,
+            battery_cost_eur=self.battery_cost_eur,
+            usage_type=self.usage_type,
+            budget_eur=self.budget_eur,
+        )
+        if error:
+            raise ValueError(error)
+        return self
 
     @property
     def annual_consumption_kwh(self) -> float:

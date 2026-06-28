@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { AlertTriangle } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { useRequireAuth, AuthChecking } from "@/lib/useRequireAuth";
 import MapSolar from "@/components/MapSolar";
@@ -17,6 +18,7 @@ import {
   runSimulation,
   uploadBill
 } from "@/lib/questionnaire";
+import { hardErrors, softWarnings, stepErrors } from "@/lib/questionnaireValidation";
 
 const REGIONS: { value: Region; label: string }[] = [
   { value: "norte", label: "Norte" },
@@ -46,6 +48,17 @@ const pill = (active: boolean) =>
       : "bg-supaste-section text-supaste-ink hover:bg-[#ececef]"
   }`;
 
+/** Erro bloqueante junto a um campo (valor impossível). */
+function FieldError({ message }: { message?: string }) {
+  if (!message) return null;
+  return (
+    <p className="flex items-start gap-1.5 text-xs font-medium text-[#b42318]">
+      <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+      <span>{message}</span>
+    </p>
+  );
+}
+
 export default function QuestionarioPage() {
   const router = useRouter();
   const { user } = useAuth();
@@ -57,6 +70,26 @@ export default function QuestionarioPage() {
   const [billNote, setBillNote] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [warnAck, setWarnAck] = useState(false);
+
+  // Validação de realismo (espelha o backend): erros bloqueantes + avisos suaves.
+  const errors = useMemo(() => hardErrors(q), [q]);
+  const warnings = useMemo(() => softWarnings(q), [q]);
+  const hasBlockingErrors = Object.keys(errors).length > 0;
+
+  // Qualquer alteração a um valor sensível obriga a reconfirmar os avisos.
+  useEffect(() => {
+    setWarnAck(false);
+  }, [
+    q.consumption_kwh,
+    q.consumption_period,
+    q.available_area_m2,
+    q.electricity_price_eur_kwh,
+    q.battery_cost_eur,
+    q.budget_eur,
+    q.usage_type,
+    q.wants_battery
+  ]);
 
   useEffect(() => {
     if (!user) return;
@@ -124,6 +157,8 @@ export default function QuestionarioPage() {
 
   const submit = async () => {
     if (!user) return;
+    // Não submeter com erros bloqueantes nem com avisos por confirmar.
+    if (hasBlockingErrors || (warnings.length > 0 && !warnAck)) return;
     setSubmitting(true);
     setError(null);
     try {
@@ -139,7 +174,8 @@ export default function QuestionarioPage() {
 
   if (!ready) return <AuthChecking />;
 
-  const canNext = step !== 0 || (q.consumption_kwh > 0 && Number.isFinite(q.consumption_kwh));
+  const canNext = Object.keys(stepErrors(q, step)).length === 0;
+  const needsConfirm = warnings.length > 0 && !warnAck;
 
   return (
     <main className="min-h-screen bg-supaste-mist text-supaste-ink">
@@ -229,6 +265,7 @@ export default function QuestionarioPage() {
                   </select>
                 </label>
               </div>
+              <FieldError message={errors.consumption_kwh} />
               <p className="text-xs text-supaste-muted">
                 Dica: numa habitação típica em Portugal, o consumo anual ronda 2500–5000 kWh.
               </p>
@@ -274,6 +311,7 @@ export default function QuestionarioPage() {
                   </span>
                 ) : null}
               </div>
+              <FieldError message={errors.available_area_m2} />
             </div>
           ) : null}
 
@@ -339,6 +377,7 @@ export default function QuestionarioPage() {
                   className={inputClass}
                 />
               </label>
+              <FieldError message={errors.electricity_price_eur_kwh} />
 
               <label className="flex items-center gap-2.5 text-sm">
                 <input
@@ -371,6 +410,7 @@ export default function QuestionarioPage() {
                     onChange={e => set("battery_cost_eur", parseFloat(e.target.value) || 0)}
                     className={inputClass}
                   />
+                  <FieldError message={errors.battery_cost_eur} />
                 </label>
               ) : null}
 
@@ -388,6 +428,7 @@ export default function QuestionarioPage() {
                   }}
                   className={inputClass}
                 />
+                <FieldError message={errors.budget_eur} />
                 <span className="text-xs text-supaste-muted">
                   Mostramos apenas propostas cujo sistema completo (IVA real) caiba neste valor.
                 </span>
@@ -399,6 +440,36 @@ export default function QuestionarioPage() {
             </div>
           ) : null}
         </section>
+
+        {/* Confirmação de valores fora do normal (não bloqueia, mas questiona) */}
+        {step === STEPS.length - 1 && needsConfirm ? (
+          <div className="rounded-[22px] border border-amber-300 bg-amber-50 p-5">
+            <div className="flex items-center gap-2 text-sm font-semibold text-amber-900">
+              <AlertTriangle className="h-4 w-4" /> Confirma estes valores antes de avançar
+            </div>
+            <ul className="mt-3 space-y-2">
+              {warnings.map(w => (
+                <li key={w.field + w.message} className="text-sm leading-relaxed text-amber-900/90">
+                  <span className="font-semibold">{w.label}:</span> {w.message}
+                </li>
+              ))}
+            </ul>
+            <button
+              type="button"
+              onClick={() => setWarnAck(true)}
+              className="mt-4 rounded-full bg-supaste-black px-5 py-2.5 text-sm font-semibold text-white"
+            >
+              Sim, está tudo certo
+            </button>
+          </div>
+        ) : null}
+
+        {/* Erros bloqueantes ainda por corrigir noutros passos */}
+        {step === STEPS.length - 1 && hasBlockingErrors ? (
+          <div className="rounded-[22px] bg-[#fdecec] px-4 py-3 text-sm text-[#b42318]">
+            Há valores por corrigir (a vermelho). Revê os passos anteriores antes de calcular.
+          </div>
+        ) : null}
 
         <div className="flex items-center justify-between">
           <button
@@ -423,7 +494,7 @@ export default function QuestionarioPage() {
             <button
               type="button"
               onClick={submit}
-              disabled={submitting}
+              disabled={submitting || hasBlockingErrors || needsConfirm}
               className="supaste-button rounded-full bg-supaste-black px-6 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
             >
               {submitting ? "A calcular…" : "Calcular propostas ideais"}
